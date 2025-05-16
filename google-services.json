@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "273216501570",
+    "project_id": "newsapp-ea699",
+    "storage_bucket": "newsapp-ea699.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:273216501570:android:e42ed0ad20e9eee7697adb",
+        "android_client_info": {
+          "package_name": "com.raffi.newslist"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXEmLyBlzA6XdOYknyC9QiPdbUwso8oew"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
