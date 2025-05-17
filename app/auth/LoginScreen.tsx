@@ -7,11 +7,11 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../../hooks/useAuth";
 import { useRouter } from "expo-router";
-import { registerForPushNotificationsAsync } from "./utils/notifications";
+import { registerForPushNotificationsAsync } from "../utils/notifications";
 import { auth } from "@/config/firebase";
-import ErrorModal from "./ErrorModal"; // համոզվիր՝ ճիշտ ճանապարհ է
+import ErrorModal from "../ErrorModal"; // համոզվիր՝ ճիշտ ճանապարհ է
 
 const LoginScreen = () => {
   const { login, loading } = useAuth();
@@ -37,7 +37,7 @@ const LoginScreen = () => {
 
       await registerForPushNotificationsAsync(userId);
 
-      router.replace({ pathname: "/NewsListScreen" as any });
+      router.replace({ pathname: "tabs/NewsListScreen" as any });
     } catch (error) {
       console.error("Մուտքի սխալ:", error);
       setShowError(true);
@@ -73,13 +73,13 @@ const LoginScreen = () => {
 
       <TouchableOpacity
         style={{ marginTop: 16 }}
-        onPress={() => router.push("/reset-password")}
+        onPress={() => router.push("auth/reset-password")}
       >
         <Text style={{ color: "#00798c" }}>Մոռացե՞լ ես գաղտնաբառը</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={{ marginTop: 16 }}
-        onPress={() => router.push("/RegisterScreen")}
+        onPress={() => router.push("auth/RegisterScreen")}
       >
         <Text style={{ color: "#00798c" }}>Գրանցվել</Text>
       </TouchableOpacity>

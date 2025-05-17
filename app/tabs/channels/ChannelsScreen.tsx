@@ -10,12 +10,17 @@ import {
   Animated,
   ScrollView,
   Modal,
+  Dimensions,
 } from "react-native";
 import Checkbox from "expo-checkbox";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "../../config/firebase";
+import { db } from "../../../config/firebase";
 import { useRouter } from "expo-router";
-import HeaderWithExitModal from "../../components/HeaderWithExitModal";
+import HeaderWithExitModal from "../../../components/HeaderWithExitModal";
+import { scale, verticalScale } from "../../utils/scale";
+import FLogo from "../../../assets/flogo.svg";
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const ChannelsScreen = () => {
   const [channels, setChannels] = useState<any[]>([]);
@@ -24,7 +29,7 @@ const ChannelsScreen = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownAnim = useRef(new Animated.Value(-300)).current;
+  const dropdownAnim = useRef(new Animated.Value(-SCREEN_WIDTH)).current;
   const router = useRouter();
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
@@ -45,7 +50,7 @@ const ChannelsScreen = () => {
   const toggleDropdown = () => {
     if (dropdownOpen) {
       Animated.timing(dropdownAnim, {
-        toValue: -300,
+        toValue: dropdownOpen ? 0 : -SCREEN_WIDTH,
         duration: 300,
         useNativeDriver: false,
       }).start(() => setDropdownOpen(false));
@@ -84,7 +89,7 @@ const ChannelsScreen = () => {
   const renderChannel = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.channelCard}
-      onPress={() => router.push(`/channels/${item.id}` as any)}
+      onPress={() => router.push(`/tabs/channels/${item.id}` as any)}
     >
       {item.logoUrl ? (
         <Image source={{ uri: item.logoUrl }} style={styles.logoBox} />
@@ -104,19 +109,18 @@ const ChannelsScreen = () => {
   return (
     <View style={styles.container}>
       <HeaderWithExitModal title="" />
+
       {/* Search + Dropdown Button */}
-      <View style={styles.searchContainer}>
+      <View style={styles.searchAndDropdownContainer}>
         <TouchableOpacity
           onPress={toggleDropdown}
           style={[
-            styles.categoryButton,
-            dropdownOpen && styles.categoryButton, // ✅ եթե բաց է՝ հավելում է գույն
+            styles.dropdownButton,
           ]}
         >
           <Text
             style={[
-              styles.categoryText,
-              dropdownOpen && styles.categoryText, // ✅ տեքստի գույնը փոխում ենք էլի
+              styles.interestText,
             ]}
           >
             Ոլորտներ
@@ -124,6 +128,7 @@ const ChannelsScreen = () => {
         </TouchableOpacity>
         <TextInput
           style={styles.searchInput}
+          placeholderTextColor="#B6B6B6"
           placeholder="Որոնել "
           value={searchTerm}
           onChangeText={(text) => {
@@ -138,48 +143,74 @@ const ChannelsScreen = () => {
       </View>
 
       {/* Dropdown */}
-      {dropdownOpen && (
-        <Animated.View style={[styles.dropdownMenu, { left: dropdownAnim }]}>
-          <ScrollView>
-            <TouchableOpacity onPress={handleSelectAll}>
-              <View style={styles.checkboxRow}>
-                <Checkbox
-                  value={selectedCategories.length === categories.length}
-                  onValueChange={handleSelectAll}
-                />
-                <Text style={styles.checkboxLabel}>Բոլորը</Text>
+      <Modal visible={dropdownOpen} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setDropdownOpen(false)}
+        >
+          <Animated.View
+            style={[
+              styles.dropdownMenu,
+              {
+                transform: [{ translateX: dropdownAnim }],
+              },
+            ]}
+          >
+            <ScrollView>
+              <View style={styles.menuLogo}>
+                <View style={styles.menuTitle}>
+                  <FLogo width={120} height={60} />
+                  <Image source={require('../../../assets/ywebLogo.png')} style={styles.menuYwebLogo} />
+                </View>
               </View>
-              <View style={styles.bolorySeparator} />
-            </TouchableOpacity>
-
-            {categories.map((cat, idx) => (
-              <TouchableOpacity key={idx} onPress={() => toggleCategory(cat)}>
+              <TouchableOpacity onPress={handleSelectAll}>
                 <View style={styles.checkboxRow}>
                   <Checkbox
-                    value={selectedCategories.includes(cat)}
-                    onValueChange={() => toggleCategory(cat)}
-                  />
-                  <Text style={styles.checkboxLabel}>{cat}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                    style={styles.checkBox}
+                    value={selectedCategories.length === categories.length}
+                    onValueChange={handleSelectAll}
+                    color={selectedCategories.length === categories.length ? '#8BC3CC' : undefined}
 
-            <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
-              <Text style={styles.filterButtonText}>Դիտել</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </Animated.View>
-      )}
+                  />
+                  <Text style={styles.checkboxLabel}>Բոլորը</Text>
+                </View>
+                <View style={styles.bolorySeparator} />
+              </TouchableOpacity>
+
+              {categories.map((cat, idx) => (
+                <TouchableOpacity key={idx} onPress={() => toggleCategory(cat)}>
+                  <View style={styles.checkboxRowList}>
+                    <Checkbox
+                      style={styles.checkBox}
+                      value={selectedCategories.includes(cat)}
+                      onValueChange={() => toggleCategory(cat)}
+                      color={selectedCategories.includes(cat) ? '#8BC3CC' : undefined}
+                    />
+                    <Text style={styles.checkboxLabel}>{cat}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
+                <Text style={styles.filterButtonText}>Դիտել</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View>
+        </TouchableOpacity >
+
+      </Modal>
 
       {/* Channel list */}
-      <FlatList
+      <View style={styles.grid}> <FlatList
         data={filteredChannels}
         renderItem={renderChannel}
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: 1 }} // Adjust spacing
         contentContainerStyle={{ paddingBottom: 3 }}
-      />
+      /></View>
+
     </View>
   );
 };
@@ -187,94 +218,124 @@ const ChannelsScreen = () => {
 export default ChannelsScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f8f8" },
-  searchContainer: {
-    marginTop: 10,
+  container: {
+    flex: 1,
+    backgroundColor: "#f8f8f8",
+  },
+  searchAndDropdownContainer: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
-    marginBottom: 10,
+    marginTop: scale(35),
+    marginBottom: scale(60),
+
   },
 
   searchInput: {
+    marginLeft: scale(16),
     backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 10,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    width: "58%", // 👉 աջում որոնման դաշտը
-    height: 44,
-  },
-  categoryButton: {
-    backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
+    paddingVertical: verticalScale(28),
+    paddingHorizontal: scale(25),
+    borderRadius: scale(23),
+    borderColor: "#CDCDCD",
+    borderWidth: scale(2),
+    width: '64%',
+    height: verticalScale(93),
   },
 
-  categoryButtonActive: {
-    backgroundColor: "#034c6a", // 👉 երբ dropdown բաց է՝ կապույտ ֆոն
-    borderColor: "#034c6a",
+  dropdownButton: {
+    backgroundColor: "#1B90A2",
+    paddingVertical: verticalScale(24),
+    paddingHorizontal: scale(54),
+    borderRadius: scale(23),
+    height: verticalScale(93),
+
   },
 
-  categoryText: {
-    fontSize: 14,
-    color: "#333",
+  interestText: {
+    fontSize: scale(36),
+    fontWeight: "500",
+    color: "#fff",
+    textAlign: "center",
   },
 
   categoryTextActive: {
     color: "#fff", // 👉 բացված վիճակում՝ սպիտակ տեքստ
   },
-
-  dropdownMenu: {
-    position: "absolute",
-    top: 228, // 👉 սա է vertical դիրքը: փոխի՝ օրինակ 200, եթե dropdown-ը մի քիչ ավելի ցած ուզես
-    zIndex: 999,
-    backgroundColor: "#168799",
-    padding: 15,
-    borderRadius: 10,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    width: 320, // 👉 սա է dropdown-ի լայնությունը. փոխի՝ օրինակ 300, եթե ավելի լայն ուզում ես
-    height: "85%", // 👉 սա բարձրությունն է: Կարաս փոխես, օրինակ՝ "75%" կամ կոնկրետ թվով՝ 500
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 999, // Make sure it's above
   },
-  
+  dropdownMenu: {
+     width: SCREEN_WIDTH * 0.75,
+     height: '100%',
+     backgroundColor: '#168799',
+     paddingHorizontal: scale(40),
+     left: 0,
+     top: 0,
+     bottom: 0,
+     borderTopRightRadius: scale(25),
+   },
+  menuTitle: {
+    flexDirection: 'row',
+    gap: (SCREEN_WIDTH * 0.75 - 120) / 2,
+  },
+  menuYwebLogo: {
+    width: scale(120),
+    height: verticalScale(120),
+
+  },
+  menuLogo: {
+    width: SCREEN_WIDTH * 0.75,
+    height: verticalScale(130),
+    flexDirection: "row",
+    marginTop: 30,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: verticalScale(150),
+  },
+  checkBox: {
+    borderRadius: scale(5),
+    borderColor: '#FFFFFF',
+    width: scale(42),
+    height: verticalScale(42),
+  },
   checkboxRow: {
     flexDirection: "row",
-    color: "#ffffff",
     alignItems: "center",
-    marginRight: 10,
-    marginLeft: 10,
-    marginBottom: 8, // 👉 սա է checkbox-ների միջև vertical spacing-ը
+  },
+  checkboxRowList: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: verticalScale(42),
   },
   checkboxLabel: {
-    marginLeft: 10, // 👉 checkbox-ից հետո տեքստի հորիզոնական հեռավորություն
-    color: "#ffffff",
-    // backgroundColor: "#ffffff",
-    fontSize: 19, // 👉 սա է տառաչափը։ Կարաս դարձնես 18 կամ 19՝ մի քիչ ավելի մեծ
-    fontWeight: "600", // 👉 սա է հաստությունը։ 400-ը ավելի բարակ է, 600-ը՝ ավելի հաստ
-    marginBottom: 7, // 👉 տողերի միջեւ հեռավորություն
+    marginLeft: scale(47),
+    color: "#FFFFFF",
+    fontSize: scale(36),
+    fontWeight: "500",
   },
   bolorySeparator: {
-    height: 1,
+    marginTop: verticalScale(26),
+    marginBottom: verticalScale(41),
+    height: scale(3),
     backgroundColor: "#fff",
-    marginVertical: 8,
     opacity: 0.5,
   },
   filterButton: {
-    marginTop: 20,
+    marginTop: scale(50),
     backgroundColor: "#fff",
     paddingVertical: 8,
     paddingHorizontal: 18,
     borderRadius: 8,
     alignSelf: "flex-end",
-    marginRight: 10,
   },
   filterButtonText: {
-    fontWeight: "bold",
-    color: "#034c6a",
+    fontSize: scale(28),
+    fontWeight: "500",
+    color: '#168799',
   },
 
   // NEW: Channel Card Styles (based on image you provided)
@@ -292,7 +353,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
   },
-  
+
   logoBox: {
     width: "100%",
     height: 100,
@@ -323,4 +384,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
   },
+  grid: {
+    paddingHorizontal: scale(45),
+
+  }
 });

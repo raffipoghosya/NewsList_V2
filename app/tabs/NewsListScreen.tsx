@@ -1,41 +1,46 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet, TextInput, FlatList, Modal,
-  Image, ScrollView, Alert, Clipboard
+  Image, ScrollView,
+  Alert, Clipboard,
+  Dimensions,
 } from "react-native";
-import { auth, db } from "../config/firebase";
+import { auth, db } from "../../config/firebase";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { useRouter } from "expo-router";
 import { Video, ResizeMode } from "expo-av";
-// import RNHTMLtoPDF from "react-native-html-to-pdf";
 import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import CloseIcon from "../assets/close.svg";
-import ShareIcon from "../assets/share.svg";
-import PdfIcon from "../assets/pdf.svg";
+import CloseIcon from "../../assets/close.svg";
+import ShareIcon from "../../assets/share.svg";
+import PdfIcon from "../../assets/pdf.svg";
 import { Animated } from "react-native";
 import Checkbox from "expo-checkbox";
-import HeaderWithExitModal from "../components/HeaderWithExitModal";
-import InterestModal from "./InterestModal";
+import HeaderWithExitModal from "../../components/HeaderWithExitModal";
+import InterestModal from "../InterestModal";
+import { scale, verticalScale } from "../utils/scale";
+import NoItem from "../../assets/images/noItem.svg";
+import FLogo from "../../assets/flogo.svg";
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const HomeScreen = () => {
   const [channelsMap, setChannelsMap] = useState<{ [id: string]: any }>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
-  const [news, setNews] = useState<{ id: string; categoryId: string; [key: string]: any }[]>([]);
+  const [news, setNews] = useState<{ id: string; categoryId: string;[key: string]: any }[]>([]);
   const [filteredNews, setFilteredNews] = useState<any[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedNews, setSelectedNews] = useState<any | null>(null);
   const router = useRouter();
-  const dropdownAnim = useRef(new Animated.Value(-300)).current;
+  const dropdownAnim = useRef(new Animated.Value(-SCREEN_WIDTH)).current;
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false); // մոդալը բացվում է login-ից հետո
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  
+
   useEffect(() => {
     const fetchCategories = async () => {
       const categoriesSnapshot = await getDocs(collection(db, "categories"));
@@ -80,18 +85,18 @@ const HomeScreen = () => {
     const fetchUserInterests = async () => {
       const user = auth.currentUser;
       if (!user) return;
-  
+
       try {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
-  
+
         if (userSnap.exists()) {
           const data = userSnap.data();
           const interests = data.categories || [];
           const hasChosenInterests = data.interestsSelected || false;
-  
+
           setSelectedInterests(interests);
-  
+
           if (interests.length > 0) {
             const filtered = news.filter(item =>
               interests.includes(item.categoryId)
@@ -100,7 +105,7 @@ const HomeScreen = () => {
           } else {
             setFilteredNews(news);
           }
-  
+
           // ✅ Բացենք մոդալը միայն եթե չի ընտրել
           if (!hasChosenInterests) {
             setShowInterestModal(true);
@@ -110,7 +115,7 @@ const HomeScreen = () => {
         console.error("Սխալ օգտատիրոջ հետաքրքրությունները կարդալիս:", error);
       }
     };
-  
+
     fetchUserInterests();
   }, []);
   useEffect(() => {
@@ -122,15 +127,15 @@ const HomeScreen = () => {
           categoryId: doc.data().categoryId || "", // Ensure categoryId is included
           ...doc.data(),
         }));
-  
+
         // Համեմատում ենք՝ արդյոք կա նոր item
         const isNewItem = allNews.some(newItem =>
           !news.find(existing => existing.id === newItem.id)
         );
-  
+
         if (isNewItem) {
           setNews(allNews);
-  
+
           // Թարմացնենք ըստ հետաքրքրությունների
           if (selectedInterests.length > 0) {
             const filtered = allNews.filter(item =>
@@ -140,7 +145,7 @@ const HomeScreen = () => {
           } else {
             setFilteredNews(allNews);
           }
-  
+
           // Ցանկանու՞մ ես այստեղ ավելացնել toast-style նոտիֆիկացիա
           console.log("Նորություն ավելացավ։");
         }
@@ -148,10 +153,10 @@ const HomeScreen = () => {
         console.error("Չհաջողվեց ստուգել նորությունները:", error);
       }
     }, 30000); // 30 վայրկյանը մեկ
-  
+
     return () => clearInterval(interval); // Մաքրում ենք ինթերվալը, երբ կոմպոնենտը դուրս է գալիս
   }, [news, selectedInterests]);
-  
+
   const handleSearchLive = (text: string) => {
     setSearchTerm(text);
     if (text.trim() === "") {
@@ -167,7 +172,7 @@ const HomeScreen = () => {
     const lower = text.toLowerCase();
     const filtered = news.filter(item =>
       (item.title?.toLowerCase().includes(lower) ||
-      item.content?.toLowerCase().includes(lower)) &&
+        item.content?.toLowerCase().includes(lower)) &&
       (selectedInterests.length === 0 || selectedInterests.includes(item.categoryId))
     );
     setFilteredNews(filtered);
@@ -176,7 +181,7 @@ const HomeScreen = () => {
   const toggleDropdown = () => {
     if (isDropdownOpen) {
       Animated.timing(dropdownAnim, {
-        toValue: -300,
+        toValue: isDropdownOpen ? 0 : -SCREEN_WIDTH,
         duration: 300,
         useNativeDriver: false,
       }).start(() => setDropdownOpen(false));
@@ -248,8 +253,6 @@ const HomeScreen = () => {
     alert("Հղումը պատճենվել է։");
   };
 
-  const goToChannels = () => router.push("/channels/ChannelsScreen" as any);
-
   const renderNewsItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.newsItem} onPress={() => openNews(item)}>
       <View style={styles.newsHeaderRow}>
@@ -283,10 +286,9 @@ const HomeScreen = () => {
   );
 
   return (
-
-    
-    <View style={styles.container}>
+    <View style={styles.content}>
       <HeaderWithExitModal title="" />
+
       <InterestModal
         visible={showInterestModal}
         onClose={(selected) => {
@@ -302,14 +304,12 @@ const HomeScreen = () => {
         <TouchableOpacity
           style={[
             styles.dropdownButton,
-            isDropdownOpen && styles.dropdownButtonActive,
           ]}
           onPress={toggleDropdown}
         >
           <Text
             style={[
               styles.interestText,
-              isDropdownOpen && styles.dropdownTextActive,
             ]}
           >
             {selectedInterest
@@ -317,62 +317,92 @@ const HomeScreen = () => {
               : "Ոլորտներ"}
           </Text>
         </TouchableOpacity>
-
         <TextInput
           style={styles.searchInput}
           placeholder="Որոնել"
-          placeholderTextColor="#8d9797"
+          placeholderTextColor="#B6B6B6"
           value={searchTerm}
           onChangeText={handleSearchLive}
         />
       </View>
-
-      {isDropdownOpen && (
-        <Animated.View style={[styles.dropdownMenu, { left: dropdownAnim }]}>
-          <ScrollView>
-            <TouchableOpacity onPress={handleSelectAll}>
-              <View style={styles.checkboxRow}>
-                <Checkbox
-                  value={selectedInterests.length === categories.length}
-                  onValueChange={handleSelectAll}
-                />
-                <Text style={styles.checkboxLabel}>Բոլորը</Text>
+      <Modal visible={isDropdownOpen} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setDropdownOpen(false)}
+        >
+          <Animated.View
+            style={[
+              styles.dropdownMenu,
+              {
+                transform: [{ translateX: dropdownAnim }],
+              },
+            ]}
+          >
+            <ScrollView>
+              <View style={styles.menuLogo}>
+                <View style={styles.menuTitle}>
+                  <FLogo width={120} height={60} />
+                  <Image source={require('../../assets/ywebLogo.png')} style={styles.menuYwebLogo} />
+                </View>
               </View>
-              <View style={styles.bolorySeparator} />
-            </TouchableOpacity>
+              <TouchableOpacity onPress={handleSelectAll}>
+                <View style={styles.checkboxRow}>
+                  <Checkbox
+                    style={styles.checkBox}
+                    value={selectedInterests.length === categories.length}
+                    onValueChange={handleSelectAll}
+                    color={selectedInterests.length === categories.length ? '#8BC3CC' : undefined}
 
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                onPress={() => toggleInterest(category.id)}
-                style={[
-                  styles.checkboxRow,
-                  selectedInterests.includes(category.id) && styles.checkboxRowSelected
-                ]}
-              >
-                <Checkbox
-                  value={selectedInterests.includes(category.id)}
-                  onValueChange={() => toggleInterest(category.id)}
-                />
-                <Text style={styles.checkboxLabel}>{category.name}</Text>
+                  />
+                  <Text style={styles.checkboxLabel}>Բոլորը</Text>
+                </View>
+                <View style={styles.bolorySeparator} />
               </TouchableOpacity>
-            ))}
 
-            <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
-              <Text style={styles.filterButtonText}>Դիտել</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </Animated.View>
-      )}
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  onPress={() => toggleInterest(category.id)}
+                  style={[
+                    styles.checkboxRowList,
+                    selectedInterests.includes(category.id) && styles.checkboxRowSelected
+                  ]}
+                >
+                  <Checkbox
+                    style={styles.checkBox}
+                    value={selectedInterests.includes(category.id)}
+                    onValueChange={() => toggleInterest(category.id)}
+                    color={selectedInterests.includes(category.id) ? '#8BC3CC' : undefined}
+                  />
+                  <Text style={styles.checkboxLabel}>{category.name}</Text>
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
+                <Text style={styles.filterButtonText}>Դիտել</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View >
+        </TouchableOpacity >
+      </Modal>
 
       <FlatList
         data={filteredNews}
         renderItem={renderNewsItem}
         keyExtractor={(item, index) => index.toString()}
-        ListEmptyComponent={<Text style={styles.noNewsText}>Այս կատեգորիայի համար նորություններ չկան։</Text>}
+        ListEmptyComponent={
+          <View style={{
+            alignItems: "center",
+            marginTop: '25%',
+          }}>
+            <Text style={styles.noNewsText}>Տվյալներ չեն գտնվել</Text>
+            <NoItem width={200} height={200} />
+          </View>}
         refreshing={loading}
         onRefresh={() => { }}
       />
+
 
       {selectedNews && (
         <Modal visible={true} animationType="slide" transparent={true}>
@@ -440,93 +470,116 @@ export default HomeScreen;
 
 // Your styles remain the same...
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f8f8",
+  content: {
+    backgroundColor: '#F8F8F8',
+
   },
   checkboxRowSelected: {
-    borderRadius: 8,
+    borderRadius: scale(5),
+  },
+  checkBox: {
+    borderRadius: scale(5),
+    borderColor: '#FFFFFF',
+    width: scale(42),
+    height: verticalScale(42),
   },
   searchAndDropdownContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginTop: verticalScale(36),
+    marginBottom: verticalScale(60),
+
   },
   dropdownButton: {
-    backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#034c6a",
-    width: "40%",
+    backgroundColor: "#1B90A2",
+    paddingVertical: verticalScale(24),
+    paddingHorizontal: scale(54),
+    borderRadius: scale(23),
+    height: verticalScale(93),
+
   },
-  dropdownButtonActive: {
-    borderColor: "#034c6a",
-  },
-  dropdownTextActive: {
-    // color: "#fff",
-  },
+ 
   interestText: {
-    fontSize: 16,
-    color: "#333",
+    fontSize: scale(36),
+    fontWeight: "500",
+    color: "#fff",
     textAlign: "center",
   },
   searchInput: {
+    marginLeft: scale(16),
     backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 10,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    width: "58%",
-    height: 44,
+    paddingVertical: verticalScale(28),
+    paddingHorizontal: scale(25),
+    borderRadius: scale(23),
+    borderColor: "#CDCDCD",
+    borderWidth: scale(2),
+    width: '64%',
+    height: verticalScale(93),
+  },
+  menuTitle: {
+    flexDirection: 'row',
+    gap: (SCREEN_WIDTH * 0.75 - 120) / 2,
+  },
+  menuYwebLogo: {
+    width: scale(120),
+    height: verticalScale(120),
+
+  },
+  menuLogo: {
+    width: SCREEN_WIDTH * 0.75,
+    height: verticalScale(130),
+    flexDirection: "row",
+    marginTop: 30,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: verticalScale(150),
   },
   dropdownMenu: {
-    position: "absolute",
-    top: 225,
-    left: "16%",
-    zIndex: 999,
-    backgroundColor: "#e6e6e6",
-    padding: 15,
-    borderRadius: 10,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    width: 260,
-    height: "85%",
+    width: SCREEN_WIDTH * 0.75,
+    height: '100%',
+    backgroundColor: '#168799',
+    paddingHorizontal: scale(40),
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderTopRightRadius: scale(25),
   },
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    
+  },
+  checkboxRowList: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: verticalScale(42),
   },
   checkboxLabel: {
-    marginLeft: 10,
-    color: "#034c6a",
-    fontSize: 17,
+    marginLeft: scale(47),
+    color: "#FFFFFF",
+    fontSize: scale(36),
     fontWeight: "500",
-    marginBottom: 7,
   },
   bolorySeparator: {
-    height: 1,
+    marginTop: verticalScale(26),
+    marginBottom: verticalScale(41),
+    height: scale(3),
     backgroundColor: "#fff",
-    marginVertical: 8,
     opacity: 0.5,
   },
   filterButton: {
-    marginTop: 20,
+    marginTop: scale(50),
     backgroundColor: "#fff",
     paddingVertical: 8,
     paddingHorizontal: 18,
     borderRadius: 8,
     alignSelf: "flex-end",
-    marginRight: 10,
   },
   filterButtonText: {
-    fontWeight: "bold",
-    color: "#034c6a",
+    fontSize: scale(28),
+    fontWeight: "500",
+    color: '#168799',
   },
   dropdownItem: {
     padding: 12,
@@ -535,37 +588,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#e6e6e6",
   },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 999, // Make sure it's above
+  },
   newsItem: {
     backgroundColor: "#fff",
-    marginBottom: 10,
-    marginHorizontal: 24,
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
+    marginBottom: verticalScale(24),
+    marginHorizontal: scale(45),
+    paddingVertical: verticalScale(42),
+    paddingHorizontal: scale(45),
+    borderRadius: scale(22),
+    borderWidth: scale(1),
+    borderColor: "#8D8D8D",
   },
   newsTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: scale(33),
+    fontWeight: "700",
+    color: "#030303",
   },
   newsImage: {
     width: "100%",
-    height: 200,
+    height: verticalScale(363),
     resizeMode: "cover",
-    borderRadius: 8,
-    marginTop: 10,
+    borderRadius: scale(20),
+    marginTop: verticalScale(30),
+    marginBottom: verticalScale(17),
   },
   newsContent: {
-    fontSize: 14,
-    color: "#777",
-    marginTop: 5,
+    fontSize: scale(27),
+    color: "#434343",
+    fontWeight: '300',
   },
   noNewsText: {
-    fontSize: 16,
-    textAlign: "center",
-    color: "#888",
-    marginTop: 40,
+    fontSize: scale(36),
+    color: "#ACACAC",
+    marginBottom: scale(150),
+    fontWeight: "400",
   },
   modalBackground: {
     flex: 1,
@@ -650,13 +710,12 @@ const styles = StyleSheet.create({
   channelInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
   },
   channelLogo: {
-    width: 45,
-    height: 45,
-    borderRadius: 100,
-    marginRight: 8,
+    width: scale(90),
+    height: verticalScale(90),
+    borderRadius: 50,
+    marginRight: scale(20),
     borderWidth: 1,
     borderColor: "#ccc",
   },
@@ -674,19 +733,21 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   channelName: {
-    fontSize: 17,
-    color: "#333",
-    fontWeight: "600",
+    fontSize: scale(32),
+    color: "#070707",
+    fontWeight: "700",
   },
   dateText: {
-    fontSize: 14,
-    color: "#555",
-    marginTop: 5,
+    fontSize: scale(30),
+    fontWeight: '400',
+    color: "#8D8D8D",
+    alignItems: "center",
+
   },
   newsHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: verticalScale(36),
   },
 });

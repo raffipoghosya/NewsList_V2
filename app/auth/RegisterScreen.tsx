@@ -12,13 +12,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { db } from "../config/firebase";
+import { db } from "../../config/firebase";
 import { getAuth } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
-import FLogo from "../assets/flogo.svg";
-import Frame from "../assets/Frame.svg";
-import { registerForPushNotificationsAsync } from "./utils/notifications";
+import FLogo from "../../assets/flogo.svg";
+import Frame from "../../assets/Frame.svg";
+import { registerForPushNotificationsAsync } from "../utils/notifications";
 
 const auth = getAuth();
 
@@ -59,7 +59,7 @@ const RegisterScreen = () => {
       await registerForPushNotificationsAsync(uid);
 
       Alert.alert("Գրանցումը հաջողվեց  ✅","մուտք գործեք");
-      router.replace({ pathname: "/LoginScreen" as any });
+      router.replace({ pathname: "auth/LoginScreen" as any });
 
     } catch (error: any) {
       console.log("🔥 Error during register:", error);
@@ -145,7 +145,7 @@ const RegisterScreen = () => {
 
         <TouchableOpacity
           style={styles.linkButton}
-          onPress={() => router.replace({ pathname: "/LoginScreen" as any })}
+          onPress={() => router.replace({ pathname: "auth/LoginScreen" as any })}
         >
           <Text style={styles.linkText}>Արդեն ունե՞ք հաշիվ՝ Մուտք գործել</Text>
         </TouchableOpacity>
