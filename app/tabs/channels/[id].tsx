@@ -19,16 +19,16 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
-import { db } from "../../config/firebase";
+import { db } from "../../../config/firebase";
 import { Video, ResizeMode } from "expo-av";
-import CloseIcon from "../../assets/close.svg";
-import ShareIcon from "../../assets/share.svg";
-import PdfIcon from "../../assets/pdf.svg";
+import CloseIcon from "../../../assets/close.svg";
+import ShareIcon from "../../../assets/share.svg";
+import PdfIcon from "../../../assets/pdf.svg";
 import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
-import HeaderWithExitModal from "../../components/HeaderWithExitModal";
+import HeaderWithExitModal from "../../../components/HeaderWithExitModal";
 
 
 const ChannelNewsScreen = () => {

@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "types": [], 
     "jsx": "react",
     "strict": true,
     "paths": {

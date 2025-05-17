@@ -10,7 +10,7 @@ export default function Index() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       setReady(true);
-      router.replace({ pathname: "/SplashScreen" as any }); 
+      router.replace({ pathname: "auth/SplashScreen" as any }); 
     }, 100); // կարճ դադար, որպեսզի layout-ը մաունթվի
 
     return () => clearTimeout(timeout);

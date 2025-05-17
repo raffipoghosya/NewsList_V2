@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db } from '../../config/firebase';
 
 const SplashScreen = () => {
   const [countdown, setCountdown] = useState(7);
@@ -45,7 +45,7 @@ const SplashScreen = () => {
     }, 1000);
 
     const timeout = setTimeout(() => {
-      router.replace("/RegisterScreen" as any);
+      router.replace("auth/RegisterScreen" as any);
     }, 7000);
 
     return () => {
@@ -57,7 +57,7 @@ const SplashScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Image source={require('../assets/flogo.png')} style={styles.logo} />
+        <Image source={require('../../assets/flogo.png')} style={styles.logo} />
         <View style={styles.circle}>
           <Text style={styles.countdown}>{countdown}</Text>
         </View>
@@ -89,10 +89,10 @@ const SplashScreen = () => {
       )}
 
       <View style={styles.bottomSection}>
-        <Image source={require('../assets/Frame.png')} style={styles.bottomLogo} />
+        <Image source={require('../../assets/Frame.png')} style={styles.bottomLogo} />
         <TouchableOpacity
           style={styles.skipButton}
-          onPress={() => router.replace("/RegisterScreen" as any)}
+          onPress={() => router.replace("auth/RegisterScreen" as any)}
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
