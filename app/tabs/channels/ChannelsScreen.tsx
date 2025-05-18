@@ -11,6 +11,8 @@ import {
   ScrollView,
   Modal,
   Dimensions,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import Checkbox from "expo-checkbox";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
@@ -19,10 +21,12 @@ import { useRouter } from "expo-router";
 import HeaderWithExitModal from "../../../components/HeaderWithExitModal";
 import { scale, verticalScale } from "../../utils/scale";
 import FLogo from "../../../assets/flogo.svg";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const ChannelsScreen = () => {
+  const insets = useSafeAreaInsets();
   const [channels, setChannels] = useState<any[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -91,8 +95,11 @@ const ChannelsScreen = () => {
       style={styles.channelCard}
       onPress={() => router.push(`/tabs/channels/${item.id}` as any)}
     >
+
       {item.logoUrl ? (
-        <Image source={{ uri: item.logoUrl }} style={styles.logoBox} />
+        <Image source={{ uri: item.logoUrl }}
+          style={styles.logoBox}
+        />
       ) : (
         <View style={styles.logoBoxPlaceholder}>
           <Text style={styles.placeholderText}>Լոգո</Text>
@@ -100,118 +107,137 @@ const ChannelsScreen = () => {
       )}
 
       <View style={styles.channelContent}>
-        <Text style={styles.channelTitle}>{item.name}</Text>
-        {item.description && <Text style={styles.channelSubtitle}>{item.description}</Text>}
+
+        <Text
+          style={styles.channelTitle}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {item.name}
+        </Text>
+
+        {item.description && (
+          <Text
+            style={styles.channelSubtitle}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.description}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <HeaderWithExitModal title="" />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <HeaderWithExitModal title="" />
 
-      {/* Search + Dropdown Button */}
-      <View style={styles.searchAndDropdownContainer}>
-        <TouchableOpacity
-          onPress={toggleDropdown}
-          style={[
-            styles.dropdownButton,
-          ]}
-        >
-          <Text
+        {/* Search + Dropdown Button */}
+        <View style={styles.searchAndDropdownContainer}>
+          <TouchableOpacity
+            onPress={toggleDropdown}
             style={[
-              styles.interestText,
+              styles.dropdownButton,
             ]}
           >
-            Ոլորտներ
-          </Text>
-        </TouchableOpacity>
-        <TextInput
-          style={styles.searchInput}
-          placeholderTextColor="#B6B6B6"
-          placeholder="Որոնել "
-          value={searchTerm}
-          onChangeText={(text) => {
-            setSearchTerm(text);
-            const filtered = channels.filter(channel =>
-              channel.name?.toLowerCase().includes(text.toLowerCase()) ||
-              channel.description?.toLowerCase().includes(text.toLowerCase())
-            );
-            setFilteredChannels(filtered);
-          }}
-        />
-      </View>
+            <Text
+              style={[
+                styles.interestText,
+              ]}
+            >
+              Ոլորտներ
+            </Text>
+          </TouchableOpacity>
+          <TextInput
+            style={styles.searchInput}
+            placeholderTextColor="#B6B6B6"
+            placeholder="Որոնել "
+            value={searchTerm}
+            onChangeText={(text) => {
+              setSearchTerm(text);
+              const filtered = channels.filter(channel =>
+                channel.name?.toLowerCase().includes(text.toLowerCase()) ||
+                channel.description?.toLowerCase().includes(text.toLowerCase())
+              );
+              setFilteredChannels(filtered);
+            }}
+          />
+        </View>
 
-      {/* Dropdown */}
-      <Modal visible={dropdownOpen} transparent animationType="fade">
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setDropdownOpen(false)}
-        >
-          <Animated.View
-            style={[
-              styles.dropdownMenu,
-              {
-                transform: [{ translateX: dropdownAnim }],
-              },
-            ]}
+        {/* Dropdown */}
+        <Modal visible={dropdownOpen} transparent animationType="fade" statusBarTranslucent>
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={() => setDropdownOpen(false)}
           >
-            <ScrollView>
-              <View style={styles.menuLogo}>
-                <View style={styles.menuTitle}>
-                  <FLogo width={120} height={60} />
-                  <Image source={require('../../../assets/ywebLogo.png')} style={styles.menuYwebLogo} />
+            <Animated.View
+              style={[
+                styles.dropdownMenu,
+                {
+                  transform: [{ translateX: dropdownAnim }],
+                  paddingTop: insets.bottom,
+                },
+              ]}
+            >
+              <ScrollView>
+                <View style={styles.menuLogo}>
+                  <View style={styles.menuTitle}>
+                    <FLogo width={120} height={60} />
+                    <Image source={require('../../../assets/ywebLogo.png')} style={styles.menuYwebLogo} />
+                  </View>
                 </View>
-              </View>
-              <TouchableOpacity onPress={handleSelectAll}>
-                <View style={styles.checkboxRow}>
-                  <Checkbox
-                    style={styles.checkBox}
-                    value={selectedCategories.length === categories.length}
-                    onValueChange={handleSelectAll}
-                    color={selectedCategories.length === categories.length ? '#8BC3CC' : undefined}
-
-                  />
-                  <Text style={styles.checkboxLabel}>Բոլորը</Text>
-                </View>
-                <View style={styles.bolorySeparator} />
-              </TouchableOpacity>
-
-              {categories.map((cat, idx) => (
-                <TouchableOpacity key={idx} onPress={() => toggleCategory(cat)}>
-                  <View style={styles.checkboxRowList}>
+                <TouchableOpacity onPress={handleSelectAll}>
+                  <View style={styles.checkboxRow}>
                     <Checkbox
                       style={styles.checkBox}
-                      value={selectedCategories.includes(cat)}
-                      onValueChange={() => toggleCategory(cat)}
-                      color={selectedCategories.includes(cat) ? '#8BC3CC' : undefined}
+                      value={selectedCategories.length === categories.length}
+                      onValueChange={handleSelectAll}
+                      color={selectedCategories.length === categories.length ? '#8BC3CC' : undefined}
+
                     />
-                    <Text style={styles.checkboxLabel}>{cat}</Text>
+                    <Text style={styles.checkboxLabel}>Բոլորը</Text>
                   </View>
+                  <View style={styles.bolorySeparator} />
                 </TouchableOpacity>
-              ))}
 
-              <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
-                <Text style={styles.filterButtonText}>Դիտել</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </Animated.View>
-        </TouchableOpacity >
+                {categories.map((cat, idx) => (
+                  <TouchableOpacity key={idx} onPress={() => toggleCategory(cat)}>
+                    <View style={styles.checkboxRowList}>
+                      <Checkbox
+                        style={styles.checkBox}
+                        value={selectedCategories.includes(cat)}
+                        onValueChange={() => toggleCategory(cat)}
+                        color={selectedCategories.includes(cat) ? '#8BC3CC' : undefined}
+                      />
+                      <Text style={styles.checkboxLabel}>{cat}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
 
-      </Modal>
+                <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
+                  <Text style={styles.filterButtonText}>Դիտել</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </Animated.View>
+          </TouchableOpacity >
 
-      {/* Channel list */}
-      <View style={styles.grid}> <FlatList
-        data={filteredChannels}
-        renderItem={renderChannel}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: 1 }} // Adjust spacing
-        contentContainerStyle={{ paddingBottom: 3 }}
-      /></View>
+        </Modal>
 
-    </View>
+        {/* Channel list */}
+        <View style={styles.grid}>
+          <FlatList
+            data={filteredChannels}
+            renderItem={renderChannel}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            contentContainerStyle={{ paddingBottom: 200 }}
+            showsVerticalScrollIndicator={false}
+          /></View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -226,31 +252,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: scale(55),
     marginTop: scale(35),
     marginBottom: scale(60),
-
-  },
-
-  searchInput: {
-    marginLeft: scale(16),
-    backgroundColor: "#fff",
-    paddingVertical: verticalScale(28),
-    paddingHorizontal: scale(25),
-    borderRadius: scale(23),
-    borderColor: "#CDCDCD",
-    borderWidth: scale(2),
-    width: '64%',
-    height: verticalScale(93),
   },
 
   dropdownButton: {
     backgroundColor: "#1B90A2",
-    paddingVertical: verticalScale(24),
     paddingHorizontal: scale(54),
     borderRadius: scale(23),
     height: verticalScale(93),
-
+    justifyContent: 'center'
   },
 
   interestText: {
@@ -259,7 +271,16 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
   },
-
+  searchInput: {
+    marginLeft: scale(16),
+    backgroundColor: "#fff",
+    paddingHorizontal: scale(25),
+    borderRadius: scale(23),
+    borderColor: "#CDCDCD",
+    borderWidth: scale(2),
+    width: '64%',
+    height: verticalScale(93),
+  },
   categoryTextActive: {
     color: "#fff", // 👉 բացված վիճակում՝ սպիտակ տեքստ
   },
@@ -269,15 +290,15 @@ const styles = StyleSheet.create({
     zIndex: 999, // Make sure it's above
   },
   dropdownMenu: {
-     width: SCREEN_WIDTH * 0.75,
-     height: '100%',
-     backgroundColor: '#168799',
-     paddingHorizontal: scale(40),
-     left: 0,
-     top: 0,
-     bottom: 0,
-     borderTopRightRadius: scale(25),
-   },
+    width: SCREEN_WIDTH * 0.75,
+    height: '100%',
+    backgroundColor: '#168799',
+    paddingHorizontal: scale(50),
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderTopRightRadius: scale(25),
+  },
   menuTitle: {
     flexDirection: 'row',
     gap: (SCREEN_WIDTH * 0.75 - 120) / 2,
@@ -338,28 +359,23 @@ const styles = StyleSheet.create({
     color: '#168799',
   },
 
-  // NEW: Channel Card Styles (based on image you provided)
   channelCard: {
     backgroundColor: "#fff",
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#ddd",
-    overflow: "hidden",
-    marginBottom: 2,
-    width: "49.8%", // Այստեղ հնարավոր է փոխել այս արժեքը՝ ավելի փոքր կամ մեծ չափերի համար
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    marginBottom: verticalScale(20),
+    marginRight: scale(20),
+    width: '48%',
+    overflow: 'hidden',
   },
 
   logoBox: {
-    width: "100%",
-    height: 100,
-    resizeMode: "cover",
+    aspectRatio: 1.4,
+    resizeMode: "stretch",
     backgroundColor: "#eee",
   },
+
   logoBoxPlaceholder: {
     width: "100%",
     height: 100,
@@ -372,20 +388,27 @@ const styles = StyleSheet.create({
     color: "#777",
   },
   channelContent: {
-    padding: 10,
+    borderTopWidth: 1,
+    borderColor: "#ddd",
+    padding: verticalScale(15),
+    justifyContent: "center",
   },
+
   channelTitle: {
-    fontSize: 14,
+    fontSize: scale(30),
     fontWeight: "bold",
     color: "#111",
     marginBottom: 4,
+    width: '100%',
   },
-  channelSubtitle: {
-    fontSize: 12,
-    color: "#666",
-  },
-  grid: {
-    paddingHorizontal: scale(45),
 
+  channelSubtitle: {
+    fontSize: scale(26),
+    color: "#666",
+    width: '100%',
+  },
+
+  grid: {
+    paddingHorizontal: scale(55),
   }
 });

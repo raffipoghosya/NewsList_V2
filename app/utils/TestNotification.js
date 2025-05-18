@@ -4,7 +4,7 @@ const token = "ExponentPushToken[sD3FXyBt1snrd3rZvMeLDy]"; // Օրինակ՝ Exp
 
 
 const sendTestNotification = async () => {
-  const message = 'շնորհավոր ապրիլի 7';
+  const message = 'Տեսնել նորությունը';
 
   const res = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
@@ -16,7 +16,7 @@ const sendTestNotification = async () => {
     body: JSON.stringify({
       to: token,
       sound: 'default',
-      title: 'կազմակերպությունը շնորհավորում է ',
+      title: 'NewsList',
       body: message,
     }),
   });

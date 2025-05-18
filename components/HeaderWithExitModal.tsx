@@ -20,10 +20,12 @@ import LogOut from "../assets/icons/logOut.svg";
 import ChannelsScreen from '../app/tabs/channels/ChannelsScreen';
 import { scale, verticalScale } from '../app/utils/scale';
 import { signOut } from 'firebase/auth';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const HeaderWithExitModal = ({ title = "" }) => {
+    const insets = useSafeAreaInsets();
     const router = useRouter();
     const pathname = usePathname(); // 👈 ստանում ենք ընթացիկ էջի ուղին
     const [showMenuBar, setShowMenuBar] = useState(false);
@@ -65,7 +67,7 @@ const HeaderWithExitModal = ({ title = "" }) => {
 
     return (
         <>
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + verticalScale(25), }]}>
                 <View style={styles.logoContainer}>
                     <TouchableOpacity onPress={() => {
                         if (pathname !== "tabs/NewsListScreen") {
@@ -87,10 +89,7 @@ const HeaderWithExitModal = ({ title = "" }) => {
             </View>
 
 
-            {/* ✅ Ավելացված կոճակների բաժին */}
-
-
-            <Modal visible={showMenuBar} transparent animationType="fade">
+            <Modal visible={showMenuBar} transparent animationType="fade" statusBarTranslucent>
                 <TouchableOpacity
                     style={styles.overlay}
                     activeOpacity={1}
@@ -101,6 +100,7 @@ const HeaderWithExitModal = ({ title = "" }) => {
                             styles.menuBar,
                             {
                                 transform: [{ translateX: slideAnim }],
+                                 paddingVertical: insets.bottom,
                             },
                         ]}
                     >
@@ -134,8 +134,6 @@ const HeaderWithExitModal = ({ title = "" }) => {
                     </Animated.View >
                 </TouchableOpacity >
             </Modal>
-
-
         </>
     );
 };
@@ -144,17 +142,16 @@ export default HeaderWithExitModal;
 
 const styles = StyleSheet.create({
     header: {
-        height: verticalScale(242),
+        height: verticalScale(250),
         backgroundColor: "#168799",
         flexDirection: "row",
-        paddingTop: 70,
-        paddingBottom: 25,
-        paddingHorizontal: scale(45),
+        paddingBottom: verticalScale(50),
+        paddingHorizontal: scale(50),
         justifyContent: 'space-between',
         alignItems: 'center',
-
     },
     logoContainer: {
+        height: verticalScale(100),
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -177,15 +174,19 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     overlay: {
-        ...StyleSheet.absoluteFillObject,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        zIndex: 999, // Make sure it's above
+        zIndex: 999,
     },
     menuBar: {
         width: SCREEN_WIDTH * 0.75,
         height: '100%',
         backgroundColor: '#168799',
-        padding: 32,
+        paddingHorizontal: scale(50),
         left: 0,
         top: 0,
         bottom: 0,
@@ -247,7 +248,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     logOut: {
-        height: verticalScale(100),
         flexDirection: "row",
         alignItems: 'center',
     },

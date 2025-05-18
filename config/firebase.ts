@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth'; // Օգտագործել `firebase/auth`
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -18,7 +18,9 @@ const app = initializeApp(firebaseConfig);
 
 // Firebase Auth-ով (պահպանելու վիճակ)
 const auth = getAuth(app); // Անհրաժեշտ է միայն `getAuth`
-
+setPersistence(auth, browserLocalPersistence).catch((e) => {
+  console.error("Persistence setup failed", e);
+});
 const db = getFirestore(app);
 const storage = getStorage(app);
 

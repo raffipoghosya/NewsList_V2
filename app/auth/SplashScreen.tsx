@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { db ,auth} from '../../config/firebase';
+import { onAuthStateChanged } from "firebase/auth";
 
 const SplashScreen = () => {
   const [countdown, setCountdown] = useState(7);
@@ -89,7 +90,7 @@ const SplashScreen = () => {
       )}
 
       <View style={styles.bottomSection}>
-        <Image source={require('../../assets/Frame.png')} style={styles.bottomLogo} />
+        <Image source={require('../../assets/ywebLogo.png')} style={styles.bottomLogo} />
         <TouchableOpacity
           style={styles.skipButton}
           onPress={() => router.replace("auth/RegisterScreen" as any)}
