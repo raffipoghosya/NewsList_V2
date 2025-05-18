@@ -9,13 +9,13 @@ import {
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import Home from "../assets/icons/home.svg";
 import { scale, verticalScale } from "../app/utils/scale";
-
-const { width } = Dimensions.get("window");
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CustomTabBar({
     state,
     navigation,
 }: BottomTabBarProps) {
+    const insets = useSafeAreaInsets();
     const handlePress = (routeName: string, index: number) => {
         if (state.index !== index) {
             navigation.navigate(routeName as never);
@@ -27,7 +27,11 @@ export default function CustomTabBar({
             {/* Curved bump */}
             <View style={styles.bump} />
 
-            <View style={styles.container}>
+            <View style={[styles.container, {
+                height: insets.bottom + verticalScale(120) || verticalScale(120),
+                paddingBottom: insets.bottom + verticalScale(35) || verticalScale(100),
+
+            }]}>
                 {/* First Tab */}
                 <TouchableOpacity
                     style={styles.tab}
@@ -62,7 +66,7 @@ const styles = StyleSheet.create({
         width: "100%",
         height: verticalScale(120),
         alignItems: "center",
-         borderTopLeftRadius: scale(50),
+        borderTopLeftRadius: scale(50),
         borderTopRightRadius: scale(50),
     },
     bump: {
@@ -80,11 +84,9 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: scale(50),
         borderTopRightRadius: scale(50),
         width: "100%",
-        height: verticalScale(120),
         justifyContent: "space-around",
         alignItems: "center",
         paddingHorizontal: scale(20),
-        paddingBottom: verticalScale(20),
     },
     tab: {
         flex: 1,

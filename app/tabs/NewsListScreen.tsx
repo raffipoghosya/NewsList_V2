@@ -1,9 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, TouchableOpacity, StyleSheet, TextInput, FlatList, Modal,
-  Image, ScrollView,
-  Alert, Clipboard,
+  View, Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  Modal,
+  TouchableWithoutFeedback,
+  Image,
+  ScrollView,
+  Alert,
+  Clipboard,
   Dimensions,
+  Keyboard,
 } from "react-native";
 import { auth, db } from "../../config/firebase";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
@@ -22,10 +31,12 @@ import InterestModal from "../InterestModal";
 import { scale, verticalScale } from "../utils/scale";
 import NoItem from "../../assets/images/noItem.svg";
 import FLogo from "../../assets/flogo.svg";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const HomeScreen = () => {
+  const insets = useSafeAreaInsets();
   const [channelsMap, setChannelsMap] = useState<{ [id: string]: any }>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setDropdownOpen] = useState(false);
@@ -105,7 +116,6 @@ const HomeScreen = () => {
           } else {
             setFilteredNews(news);
           }
-
           // ✅ Բացենք մոդալը միայն եթե չի ընտրել
           if (!hasChosenInterests) {
             setShowInterestModal(true);
@@ -286,183 +296,190 @@ const HomeScreen = () => {
   );
 
   return (
-    <View style={styles.content}>
-      <HeaderWithExitModal title="" />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.content}>
+        <HeaderWithExitModal title="" />
 
-      <InterestModal
-        visible={showInterestModal}
-        onClose={(selected) => {
-          setSelectedInterests(selected);
-          setFilteredNews(
-            news.filter((item) => selected.includes(item.categoryId))
-          );
-          setShowInterestModal(false);
-        }}
-      />
-
-      <View style={styles.searchAndDropdownContainer}>
-        <TouchableOpacity
-          style={[
-            styles.dropdownButton,
-          ]}
-          onPress={toggleDropdown}
-        >
-          <Text
-            style={[
-              styles.interestText,
-            ]}
-          >
-            {selectedInterest
-              ? categories.find(cat => cat.id === selectedInterest)?.name
-              : "Ոլորտներ"}
-          </Text>
-        </TouchableOpacity>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Որոնել"
-          placeholderTextColor="#B6B6B6"
-          value={searchTerm}
-          onChangeText={handleSearchLive}
+        <InterestModal
+          visible={showInterestModal}
+          onClose={(selected) => {
+            setSelectedInterests(selected);
+            setFilteredNews(
+              news.filter((item) => selected.includes(item.categoryId))
+            );
+            setShowInterestModal(false);
+          }}
         />
-      </View>
-      <Modal visible={isDropdownOpen} transparent animationType="fade">
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setDropdownOpen(false)}
-        >
-          <Animated.View
+
+        <View style={styles.searchAndDropdownContainer}>
+          <TouchableOpacity
             style={[
-              styles.dropdownMenu,
-              {
-                transform: [{ translateX: dropdownAnim }],
-              },
+              styles.dropdownButton,
             ]}
+            onPress={toggleDropdown}
           >
-            <ScrollView>
-              <View style={styles.menuLogo}>
-                <View style={styles.menuTitle}>
-                  <FLogo width={120} height={60} />
-                  <Image source={require('../../assets/ywebLogo.png')} style={styles.menuYwebLogo} />
-                </View>
-              </View>
-              <TouchableOpacity onPress={handleSelectAll}>
-                <View style={styles.checkboxRow}>
-                  <Checkbox
-                    style={styles.checkBox}
-                    value={selectedInterests.length === categories.length}
-                    onValueChange={handleSelectAll}
-                    color={selectedInterests.length === categories.length ? '#8BC3CC' : undefined}
-
-                  />
-                  <Text style={styles.checkboxLabel}>Բոլորը</Text>
-                </View>
-                <View style={styles.bolorySeparator} />
-              </TouchableOpacity>
-
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  onPress={() => toggleInterest(category.id)}
-                  style={[
-                    styles.checkboxRowList,
-                    selectedInterests.includes(category.id) && styles.checkboxRowSelected
-                  ]}
-                >
-                  <Checkbox
-                    style={styles.checkBox}
-                    value={selectedInterests.includes(category.id)}
-                    onValueChange={() => toggleInterest(category.id)}
-                    color={selectedInterests.includes(category.id) ? '#8BC3CC' : undefined}
-                  />
-                  <Text style={styles.checkboxLabel}>{category.name}</Text>
-                </TouchableOpacity>
-              ))}
-
-              <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
-                <Text style={styles.filterButtonText}>Դիտել</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </Animated.View >
-        </TouchableOpacity >
-      </Modal>
-
-      <FlatList
-        data={filteredNews}
-        renderItem={renderNewsItem}
-        keyExtractor={(item, index) => index.toString()}
-        ListEmptyComponent={
-          <View style={{
-            alignItems: "center",
-            marginTop: '25%',
-          }}>
-            <Text style={styles.noNewsText}>Տվյալներ չեն գտնվել</Text>
-            <NoItem width={200} height={200} />
-          </View>}
-        refreshing={loading}
-        onRefresh={() => { }}
-      />
-
-
-      {selectedNews && (
-        <Modal visible={true} animationType="slide" transparent={true}>
-          <View style={styles.modalBackground}>
-            <View style={styles.modalContent}>
-              <TouchableOpacity onPress={closeNews} style={styles.modalCloseButton}>
-                <CloseIcon width={26} height={26} fill="#168799" />
-              </TouchableOpacity>
-
-              <View style={styles.newsHeaderRow}>
-                <View style={styles.channelInfo}>
-                  {selectedNews.channelId && channelsMap[selectedNews.channelId]?.logoUrl ? (
-                    <Image source={{ uri: channelsMap[selectedNews.channelId].logoUrl }} style={styles.channelLogo} />
-                  ) : (
-                    <View style={styles.channelFallback}>
-                      <Text style={styles.channelFallbackText}>N</Text>
-                    </View>
-                  )}
-                  <Text style={styles.channelName}>
-                    {channelsMap[selectedNews.channelId]?.name ?? "NewsList"}
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={styles.modalTitle}>{selectedNews.title}</Text>
-              <Text style={styles.modalDate}>{formatDate(selectedNews.createdAt)}</Text>
-
-              <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
-                {selectedNews.imageUrls?.map((url: string, idx: number) => (
-                  <Image key={`img-${idx}`} source={{ uri: url }} style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }} />
-                ))}
-                {selectedNews.videoUrls?.map((url: string, idx: number) => (
-                  <Video
-                    key={`vid-${idx}`}
-                    source={{ uri: url }}
-                    style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }}
-                    useNativeControls
-                    resizeMode={ResizeMode.CONTAIN}
-                  />
-                ))}
-              </ScrollView>
-
+            <Text
+              style={[
+                styles.interestText,
+              ]}
+            >
+              {selectedInterest
+                ? categories.find(cat => cat.id === selectedInterest)?.name
+                : "Ոլորտներ"}
+            </Text>
+          </TouchableOpacity>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Որոնել"
+            placeholderTextColor="#B6B6B6"
+            value={searchTerm}
+            onChangeText={handleSearchLive}
+          />
+        </View>
+        <Modal visible={isDropdownOpen} transparent animationType="fade" statusBarTranslucent>
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={() => setDropdownOpen(false)}
+          >
+            <Animated.View
+              style={[
+                styles.dropdownMenu,
+                {
+                  transform: [{ translateX: dropdownAnim }],
+                  paddingTop: insets.bottom,
+                },
+              ]}
+            >
               <ScrollView>
-                <Text style={styles.modalContentText}>{selectedNews.content}</Text>
+                <View style={styles.menuLogo}>
+                  <View style={styles.menuTitle}>
+                    <FLogo width={120} height={60} />
+                    <Image source={require('../../assets/ywebLogo.png')} style={styles.menuYwebLogo} />
+                  </View>
+                </View>
+                <TouchableOpacity onPress={handleSelectAll}>
+                  <View style={styles.checkboxRow}>
+                    <Checkbox
+                      style={styles.checkBox}
+                      value={selectedInterests.length === categories.length}
+                      onValueChange={handleSelectAll}
+                      color={selectedInterests.length === categories.length ? '#8BC3CC' : undefined}
+
+                    />
+                    <Text style={styles.checkboxLabel}>Բոլորը</Text>
+                  </View>
+                  <View style={styles.bolorySeparator} />
+                </TouchableOpacity>
+
+                {categories.map((category) => (
+                  <TouchableOpacity
+                    key={category.id}
+                    onPress={() => toggleInterest(category.id)}
+                    style={[
+                      styles.checkboxRowList,
+                      selectedInterests.includes(category.id) && styles.checkboxRowSelected
+                    ]}
+                  >
+                    <Checkbox
+                      style={styles.checkBox}
+                      value={selectedInterests.includes(category.id)}
+                      onValueChange={() => toggleInterest(category.id)}
+                      color={selectedInterests.includes(category.id) ? '#8BC3CC' : undefined}
+                    />
+                    <Text style={styles.checkboxLabel}>{category.name}</Text>
+                  </TouchableOpacity>
+                ))}
+
+                <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
+                  <Text style={styles.filterButtonText}>Դիտել</Text>
+                </TouchableOpacity>
               </ScrollView>
+            </Animated.View >
+          </TouchableOpacity >
+        </Modal>
+        <FlatList
+          style={{
+            backgroundColor: '#F8F8F8',
+            height: '100%',
+            marginHorizontal: scale(55),
+          }}
+          data={filteredNews}
+          contentContainerStyle={{ paddingBottom: 200 }}
+          showsVerticalScrollIndicator={false}
+          renderItem={renderNewsItem}
+          keyExtractor={(item, index) => index.toString()}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.noNewsText}>Տվյալներ չեն գտնվել</Text>
+              <NoItem width={200} height={200} />
+            </View>}
+          refreshing={loading}
+          onRefresh={() => { }}
+        />
 
-              <View style={styles.bottomActionButtons}>
-                <TouchableOpacity onPress={generatePDF} style={styles.actionCircle}>
-                  <PdfIcon width={20} height={20} fill="#fff" />
+
+        {selectedNews && (
+          <Modal visible={true} animationType="slide" transparent={true}>
+            <View style={styles.modalBackground}>
+              <View style={styles.modalContent}>
+                <TouchableOpacity onPress={closeNews} style={styles.modalCloseButton}>
+                  <CloseIcon width={26} height={26} fill="#168799" />
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={copyNewsLink} style={styles.actionCircle}>
-                  <ShareIcon width={20} height={20} fill="#fff" />
-                </TouchableOpacity>
+                <View style={styles.newsHeaderRow}>
+                  <View style={styles.channelInfo}>
+                    {selectedNews.channelId && channelsMap[selectedNews.channelId]?.logoUrl ? (
+                      <Image source={{ uri: channelsMap[selectedNews.channelId].logoUrl }} style={styles.channelLogo} />
+                    ) : (
+                      <View style={styles.channelFallback}>
+                        <Text style={styles.channelFallbackText}>N</Text>
+                      </View>
+                    )}
+                    <Text style={styles.channelName}>
+                      {channelsMap[selectedNews.channelId]?.name ?? "NewsList"}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.modalTitle}>{selectedNews.title}</Text>
+                <Text style={styles.modalDate}>{formatDate(selectedNews.createdAt)}</Text>
+
+                <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+                  {selectedNews.imageUrls?.map((url: string, idx: number) => (
+                    <Image key={`img-${idx}`} source={{ uri: url }} style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }} />
+                  ))}
+                  {selectedNews.videoUrls?.map((url: string, idx: number) => (
+                    <Video
+                      key={`vid-${idx}`}
+                      source={{ uri: url }}
+                      style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }}
+                      useNativeControls
+                      resizeMode={ResizeMode.CONTAIN}
+                    />
+                  ))}
+                </ScrollView>
+
+                <ScrollView>
+                  <Text style={styles.modalContentText}>{selectedNews.content}</Text>
+                </ScrollView>
+
+                <View style={styles.bottomActionButtons}>
+                  <TouchableOpacity onPress={generatePDF} style={styles.actionCircle}>
+                    <PdfIcon width={20} height={20} fill="#fff" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={copyNewsLink} style={styles.actionCircle}>
+                    <ShareIcon width={20} height={20} fill="#fff" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        </Modal>
-      )}
-    </View>
+          </Modal>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
+
   );
 };
 
@@ -487,20 +504,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: scale(55),
     marginTop: verticalScale(36),
     marginBottom: verticalScale(60),
 
   },
   dropdownButton: {
     backgroundColor: "#1B90A2",
-    paddingVertical: verticalScale(24),
     paddingHorizontal: scale(54),
     borderRadius: scale(23),
     height: verticalScale(93),
-
+    justifyContent: 'center'
   },
- 
+
   interestText: {
     fontSize: scale(36),
     fontWeight: "500",
@@ -510,7 +526,6 @@ const styles = StyleSheet.create({
   searchInput: {
     marginLeft: scale(16),
     backgroundColor: "#fff",
-    paddingVertical: verticalScale(28),
     paddingHorizontal: scale(25),
     borderRadius: scale(23),
     borderColor: "#CDCDCD",
@@ -540,7 +555,7 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH * 0.75,
     height: '100%',
     backgroundColor: '#168799',
-    paddingHorizontal: scale(40),
+    paddingHorizontal: scale(50),
     left: 0,
     top: 0,
     bottom: 0,
@@ -596,7 +611,6 @@ const styles = StyleSheet.create({
   newsItem: {
     backgroundColor: "#fff",
     marginBottom: verticalScale(24),
-    marginHorizontal: scale(45),
     paddingVertical: verticalScale(42),
     paddingHorizontal: scale(45),
     borderRadius: scale(22),
@@ -750,4 +764,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: verticalScale(36),
   },
+  empty: {
+    flex: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: verticalScale(200),
+    height: '100%',
+    backgroundColor: '#F8F8F8'
+  }
 });

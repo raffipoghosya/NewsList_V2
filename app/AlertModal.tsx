@@ -1,28 +1,33 @@
-// ErrorModal.tsx
 import React from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import WrongPassWord from "../assets/images/wrongPassword.svg";
+import { Modal, View, Text, StyleSheet, TouchableOpacity, Image, ViewStyle } from 'react-native';
 import { scale, verticalScale } from './utils/scale';
 
-interface ErrorModalProps {
+interface AlertModalProps {
   visible: boolean;
   onClose: () => void;
+  title?: string;
   message?: string;
+  buttonText?: string;
+  image?: React.ReactNode;
+  containerStyle?: ViewStyle;
 }
 
-const ErrorModal: React.FC<ErrorModalProps> = ({ visible, onClose, message }) => {
+const AlertModal: React.FC<AlertModalProps> = ({
+  visible,
+  onClose,
+  title = 'Alert',
+  buttonText = 'OK',
+  image,
+  containerStyle,
+}) => {
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-    >
+    <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.title}>ՍԽԱԼ ԾԱԾԿԱԳԻՐ</Text>
-          <WrongPassWord width={120} height={60} />
+        <View style={[styles.modalContainer, containerStyle]}>
+          <Text style={styles.title}>{title}</Text>
+          {image}
           <TouchableOpacity onPress={onClose} style={styles.button}>
-            <Text style={styles.buttonText}>Փորձել կրկին</Text>
+            <Text style={styles.buttonText}>{buttonText}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -30,7 +35,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ visible, onClose, message }) =>
   );
 };
 
-export default ErrorModal;
+export default AlertModal;
 
 const styles = StyleSheet.create({
   overlay: {
@@ -54,7 +59,9 @@ const styles = StyleSheet.create({
     fontSize: scale(42),
     fontWeight: '400',
     marginBottom: verticalScale(39),
+    marginHorizontal: scale(12),
     color: '#1B90A2',
+    textAlign: 'center',
   },
   message: {
     fontSize: 16,

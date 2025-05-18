@@ -15,7 +15,11 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { db } from "../../config/firebase";
 import { getAuth } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-
+import AlertModal from "../AlertModal";
+import Check from '../../assets/icons/check.svg';
+import AlertImage from '../../assets/icons/alert.svg';
+import StrongPassword from '../../assets/icons/strongPassword.svg';
+import ResetPassword from '../../assets/icons/resetPassword.svg';
 import FLogo from "../../assets/flogo.svg";
 import Frame from "../../assets/Frame.svg";
 import { registerForPushNotificationsAsync } from "../utils/notifications";
@@ -32,15 +36,21 @@ const RegisterScreen = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alreadyExist, setAlreadyExist] = useState(false);
+  const [wrongEmail, setWrongEmail] = useState(false);
+  const [strongPassword, setstrongPassword] = useState(false);
+  const [fillAllFields, setFillAllFields] = useState(false);
+  const [passwordsDoesntMatch, setPasswordsDoesntMatch] = useState(false);
 
   const handleRegister = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert("Սխալ 🚫 ", "Խնդրում ենք լրացնել բոլոր դաշտերը");
+      setFillAllFields(true)
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Սխալ 🚫 ", "Գաղտնաբառերը չեն համընկնում");
+      setPasswordsDoesntMatch(true)
       return;
     }
 
@@ -57,18 +67,15 @@ const RegisterScreen = () => {
       });
 
       await registerForPushNotificationsAsync(uid);
-
-      Alert.alert("Գրանցումը հաջողվեց  ✅","մուտք գործեք");
-      router.replace({ pathname: "auth/LoginScreen" as any });
-
+      setShowAlert(true);
     } catch (error: any) {
       console.log("🔥 Error during register:", error);
       if (error.code === "auth/email-already-in-use") {
-        Alert.alert("Այս email-ով 🔔", "հաշիվ արդեն գոյություն ունի");
+        setAlreadyExist(true);
       } else if (error.code === "auth/invalid-email") {
-        Alert.alert("email-ի 🚫 ", "ձևաչափը սխալ է");
+        setWrongEmail(true);
       } else if (error.code === "auth/weak-password") {
-        Alert.alert("Գաղտնաբառը 🔔", "Պետք է լինի առնվազն 6 նիշ");
+        setstrongPassword(true);
       } else {
         Alert.alert("Սխալ", error.message);
       }
@@ -82,6 +89,7 @@ const RegisterScreen = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
+
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.header}>
           <Frame width={40} height={80} />
@@ -150,6 +158,61 @@ const RegisterScreen = () => {
           <Text style={styles.linkText}>Արդեն ունե՞ք հաշիվ՝ Մուտք գործել</Text>
         </TouchableOpacity>
       </ScrollView>
+      <AlertModal
+        visible={showAlert}
+        onClose={() => {
+          setShowAlert(false);
+          router.replace({ pathname: "auth/LoginScreen" as any });
+        }}
+        title="ԳՐԱՆՑՈՒՄԸ ՀԱՋՈՂՎԵՑ"
+        buttonText="Լավ"
+        image={<Check width={120} height={80} color='#AFDDDE' />}
+      />
+      <AlertModal
+        visible={alreadyExist}
+        onClose={() => {
+          setAlreadyExist(false);
+        }}
+        title="Նշված էլ-հասցեով հաշիվ արդեն գոյություն ունի"
+        buttonText="Փորձել այլ էլ-հասցե"
+        image={<AlertImage width={120} height={60} />}
+      />
+      <AlertModal
+        visible={wrongEmail}
+        onClose={() => {
+          setWrongEmail(false);
+        }}
+        title="Էլ-հասցեի սխալ ձևաչափ"
+        buttonText="Փորձել այլ էլ-հասցե"
+        image={<AlertImage width={120} height={60} />}
+      />
+      <AlertModal
+        visible={strongPassword}
+        onClose={() => {
+          setstrongPassword(false);
+        }}
+        title="Գաղտնաբառը պետք է պարունակի առնվազն 6 նիշ"
+        buttonText="Փորձել այլ գաղտնաբառ"
+        image={<StrongPassword width={200} height={80} />}
+      />
+      <AlertModal
+        visible={fillAllFields}
+        onClose={() => {
+          setFillAllFields(false);
+        }}
+        title="Խնդրում ենք լրացնել բոլոր դաշտերը"
+        buttonText="Փորձել կրկին"
+        image={<AlertImage width={120} height={60} />}
+      />
+      <AlertModal
+        visible={passwordsDoesntMatch}
+        onClose={() => {
+          setPasswordsDoesntMatch(false);
+        }}
+        title="Գաղտնաբառերը չեն համընկնում"
+        buttonText="Փորձել կրկին"
+        image={<ResetPassword width={120} height={60} />}
+      />
     </KeyboardAvoidingView>
   );
 };

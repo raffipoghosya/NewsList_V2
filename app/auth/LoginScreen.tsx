@@ -11,12 +11,12 @@ import { useAuth } from "../../hooks/useAuth";
 import { useRouter } from "expo-router";
 import { registerForPushNotificationsAsync } from "../utils/notifications";
 import { auth } from "@/config/firebase";
-import ErrorModal from "../ErrorModal"; // համոզվիր՝ ճիշտ ճանապարհ է
+import AlertModal from "../AlertModal"; 
+import WrongPassWord from '../../assets/icons/wrongPassword.svg';
 
 const LoginScreen = () => {
   const { login, loading } = useAuth();
   const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showError, setShowError] = useState(false);
@@ -83,12 +83,12 @@ const LoginScreen = () => {
       >
         <Text style={{ color: "#00798c" }}>Գրանցվել</Text>
       </TouchableOpacity>
-
-      {/* ✅ Error Modal */}
-      <ErrorModal
+      <AlertModal
         visible={showError}
         onClose={() => setShowError(false)}
-        message="Սխալ տվյալներ են մուտքագրվել։"
+        title="ՍԽԱԼ ԾԱԾԿԱԳԻՐ"
+        buttonText="Փորձել կրկին"
+        image={<WrongPassWord width={120} height={60} />}
       />
     </View>
   );
