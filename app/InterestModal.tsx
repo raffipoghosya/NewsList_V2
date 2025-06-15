@@ -1,4 +1,3 @@
-// components/InterestModal.tsx
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -11,7 +10,7 @@ import {
   Easing,
 } from "react-native";
 import Checkbox from "expo-checkbox";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, query, orderBy } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
 
 interface Props {
@@ -22,12 +21,13 @@ interface Props {
 const InterestModal = ({ visible, onClose }: Props) => {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const snap = await getDocs(collection(db, "categories"));
+      const q = query(collection(db, "categories"), orderBy("order", "asc"));
+      const snap = await getDocs(q);
       const data = snap.docs.map((doc) => ({
         id: doc.id,
         name: doc.data().name,
@@ -52,74 +52,94 @@ const InterestModal = ({ visible, onClose }: Props) => {
 
   const toggleCategory = (id: string) => {
     setSelected((prev) =>
-      prev.includes(id)
-        ? prev.filter((cat) => cat !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((cat) => cat !== id) : [...prev, id]
     );
   };
 
   const handleSave = async () => {
+    if (selected.length === 0) {
+      setErrorModalVisible(true);
+      return;
+    }
+
     const user = auth.currentUser;
     if (!user) return;
-  
+
     try {
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         categories: selected,
-        interestsSelected: true, // ✅ Մեկ անգամ նշվում է
+        interestsSelected: true,
       });
-  
-      onClose(selected); // մոդալը փակում ենք
+
+      onClose(selected);
     } catch (error) {
       console.error("Սխալ պահպանման ժամանակ:", error);
     }
   };
-  
-  
 
   return (
     <Modal visible={visible} animationType="fade" transparent>
       <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-        <Animated.View style={[styles.modal]}>
-          <Text style={styles.title}>🧠 Ընտրիր քո հետաքրքրությունները</Text>
-
-          <ScrollView style={styles.scroll}>
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                onPress={() => toggleCategory(cat.id)}
-                style={[
-                  styles.item,
-                  selected.includes(cat.id) && styles.itemSelected,
-                ]}
-              >
-                <Checkbox
-                  value={selected.includes(cat.id)}
-                  onValueChange={() => toggleCategory(cat.id)}
-                  color="#034c6a"
-                />
-                <Text
-                  style={[
-                    styles.label,
-                    selected.includes(cat.id) && styles.labelSelected,
-                  ]}
-                >
-                  {cat.name}
+        <Animated.View style={styles.modal}>
+          {errorModalVisible ? (
+            <>
+              <View style={styles.errorContent}>
+                <Text style={styles.errorText}>
+                  Որպիսի շարունակենք, ընտրիր լրահոսի թեման(ները)
                 </Text>
+              </View>
+              <View style={styles.errorFooter}>
+                <TouchableOpacity
+                  style={styles.errorButton}
+                  onPress={() => setErrorModalVisible(false)}
+                >
+                  <Text style={styles.errorButtonText}>Հասկացա</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>Ինչ Թեմաներով ՈՒղարկենք լրահոս</Text>
+  
+              <ScrollView style={styles.scroll}>
+                {categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => toggleCategory(cat.id)}
+                    style={[
+                      styles.item,
+                      selected.includes(cat.id) && styles.itemSelected,
+                    ]}
+                  >
+                    <Checkbox
+                      value={selected.includes(cat.id)}
+                      onValueChange={() => toggleCategory(cat.id)}
+                      color="#034c6a"
+                    />
+                    <Text
+                      style={[
+                        styles.label,
+                        selected.includes(cat.id) && styles.labelSelected,
+                      ]}
+                    >
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+  
+              <TouchableOpacity style={styles.button} onPress={handleSave}>
+                <Text style={styles.buttonText}>Գնացինք 🚀</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <TouchableOpacity style={styles.button} onPress={handleSave}>
-            <Text style={styles.buttonText}>Գնացինք 🚀</Text>
-          </TouchableOpacity>
+            </>
+          )}
         </Animated.View>
       </Animated.View>
     </Modal>
   );
-};
-
-export default InterestModal;
+  
+};  
 
 const styles = StyleSheet.create({
   overlay: {
@@ -189,4 +209,44 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600",
   },
+  errorModal: {
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  errorContent: {
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 17,
+    textAlign: "center",
+    color: "#333",
+    marginBottom: 20,
+  },
+  errorButton: {
+    backgroundColor: "#00798c",
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 18,
+  },
+  errorFooter: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  errorButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
+
+export default InterestModal;

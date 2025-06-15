@@ -29,6 +29,9 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import HeaderWithExitModal from "../../../components/HeaderWithExitModal";
+import { WebView } from "react-native-webview";
+import YoutubePlayer from 'react-native-youtube-iframe';
+
 
 
 const ChannelNewsScreen = () => {
@@ -39,15 +42,24 @@ const ChannelNewsScreen = () => {
   const [channelLogo, setChannelLogo] = useState(null);
   const [news, setNews] = useState<NewsItem[]>([]);
   interface NewsItem {
+    youtubeUrl: string;
     id: string;
     title: string;
     content: string;
     createdAt: { seconds: number };
     imageUrls?: string[];
     videoUrls?: string[];
+    youtubeUrls?: string[];
   }
 
+
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  
+const extractYouTubeId = (url: string) => {
+  const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = url.match(regExp);
+  return match ? match[1] : "";
+};
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -76,8 +88,10 @@ const ChannelNewsScreen = () => {
           createdAt: docData.createdAt || { seconds: 0 },
           imageUrls: docData.imageUrls || [],
           videoUrls: docData.videoUrls || [],
+          youtubeUrls: docData.youtubeUrls || [],
+          youtubeUrl: docData.youtubeUrl || "",
         };
-      });
+      }).sort((a, b) => b.createdAt.seconds - a.createdAt.seconds); 
       setNews(data);
     };
 
@@ -119,6 +133,14 @@ const ChannelNewsScreen = () => {
     await Clipboard.setStringAsync(link);
     alert("Հղումը պատճենվել է։");
   };
+
+    // Extract YouTube video ID from URL
+  // Ավելացրեք այս ֆունկցիան ձեր կոմպոնենտից դուրս
+const extractYoutubeId = (url: string) => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
 
   const renderNews = ({ item }: { item: NewsItem }) => (
     <TouchableOpacity style={styles.newsCard} onPress={() => openNews(item)}>
@@ -177,7 +199,7 @@ const ChannelNewsScreen = () => {
               <Text style={styles.modalTitle}>{selectedNews.title}</Text>
               <Text style={styles.modalDate}>{formatDate(selectedNews.createdAt)}</Text>
 
-              <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+              <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginVertical: 10,height:400, }}>
                 {selectedNews.imageUrls?.map((url, idx) => (
                   <Image
                     key={`img-${idx}`}
@@ -194,6 +216,16 @@ const ChannelNewsScreen = () => {
                     resizeMode={ResizeMode.CONTAIN}
                   />
                 ))}
+                {selectedNews.youtubeUrl && extractYoutubeId(selectedNews.youtubeUrl) && (
+                  <View style={styles.youtubePlayer}>
+                    <YoutubePlayer
+                      height={200}
+                      width={400}
+                      videoId={extractYoutubeId(selectedNews.youtubeUrl)}
+                      webViewStyle={{ borderRadius: 8 }}
+                    />
+                  </View>
+                )}
               </ScrollView>
 
               <ScrollView contentContainerStyle={{ paddingBottom: 70 }}>
@@ -227,6 +259,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 10,
+  },
+  youtubePlayer: {
+    width: "100%",
+    height: 200,
+    marginRight: 10,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   channelInfo: {
     flexDirection: "row",

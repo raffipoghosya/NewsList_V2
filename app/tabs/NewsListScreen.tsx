@@ -22,6 +22,7 @@ import InterestModal from "../InterestModal";
 import { scale, verticalScale } from "../utils/scale";
 import NoItem from "../../assets/images/noItem.svg";
 import FLogo from "../../assets/flogo.svg";
+import YoutubePlayer from 'react-native-youtube-iframe';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -30,7 +31,7 @@ const HomeScreen = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
-  const [news, setNews] = useState<{ id: string; categoryId: string;[key: string]: any }[]>([]);
+  const [news, setNews] = useState<{ id: string; categoryId: string; createdAt?: { seconds: number }; [key: string]: any }[]>([]);
   const [filteredNews, setFilteredNews] = useState<any[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,17 +42,32 @@ const HomeScreen = () => {
   const [showInterestModal, setShowInterestModal] = useState(false); // մոդալը բացվում է login-ից հետո
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
+
+
+
+
+  
+// components/HomeScreen.tsx
+useEffect(() => {
+  const fetchCategories = async () => {
+    try {
       const categoriesSnapshot = await getDocs(collection(db, "categories"));
-      const cats = categoriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name
-      }));
+      const cats = categoriesSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          name: doc.data().name,
+          order: doc.data().order || 0, // ✅ Default 0, եթե order չկա
+        }))
+        .sort((a, b) => a.order - b.order); // 🔄 Սորտավորում ձեռքով
+      
       setCategories(cats);
-    };
-    fetchCategories();
-  }, []);
+    } catch (error) {
+      console.error("Սխալ կատեգորիաներ բեռնելիս:", error);
+    }
+  };
+  
+  fetchCategories();
+}, []);
 
   useEffect(() => {
     const fetchChannels = async () => {
@@ -71,9 +87,10 @@ const HomeScreen = () => {
       const snapshot = await getDocs(collection(db, "news"));
       const allNews = snapshot.docs.map(doc => ({
         id: doc.id,
-        categoryId: doc.data().categoryId || "", // Ensure categoryId is included
+        categoryId: doc.data().categoryId || "",
         ...doc.data(),
-      }));
+      }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); // 🔽 Վերջինները վերև
       setNews(allNews);
       setFilteredNews(allNews);
       setLoading(false);
@@ -253,6 +270,15 @@ const HomeScreen = () => {
     alert("Հղումը պատճենվել է։");
   };
 
+
+
+  // Extract YouTube video ID from URL
+  // Ավելացրեք այս ֆունկցիան ձեր կոմպոնենտից դուրս
+const extractYoutubeId = (url: string) => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
   const renderNewsItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.newsItem} onPress={() => openNews(item)}>
       <View style={styles.newsHeaderRow}>
@@ -279,9 +305,9 @@ const HomeScreen = () => {
         <Image source={{ uri: item.imageUrls[0] }} style={styles.newsImage} />
       )}
 
-      <Text style={styles.newsContent}>
+      {/* <Text style={styles.newsContent}>
         {item.content.length > 200 ? item.content.substring(0, 200) + "..." : item.content}
-      </Text>
+      </Text> */}
     </TouchableOpacity>
   );
 
@@ -391,6 +417,9 @@ const HomeScreen = () => {
         data={filteredNews}
         renderItem={renderNewsItem}
         keyExtractor={(item, index) => index.toString()}
+        contentContainerStyle={{
+          paddingBottom: verticalScale(450), // ✅ Հավելում ենք ներքևի padding
+        }}
         ListEmptyComponent={
           <View style={{
             alignItems: "center",
@@ -438,11 +467,20 @@ const HomeScreen = () => {
                   <Video
                     key={`vid-${idx}`}
                     source={{ uri: url }}
-                    style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }}
+                    style={{ width: 300, height: 450, marginRight: 10, borderRadius: 8 }}
                     useNativeControls
                     resizeMode={ResizeMode.CONTAIN}
                   />
                 ))}
+                {selectedNews.youtubeUrl && (
+                  <View style={{ width: 300, height: 450, marginRight: 10, borderRadius: 8 }}>
+                    <YoutubePlayer
+                      height={200}
+                      width={300}
+                      videoId={extractYoutubeId(selectedNews.youtubeUrl)}
+                    />
+                  </View>
+                   )}
               </ScrollView>
 
               <ScrollView>
@@ -610,8 +648,8 @@ const styles = StyleSheet.create({
   },
   newsImage: {
     width: "100%",
-    height: verticalScale(363),
-    resizeMode: "cover",
+    height: verticalScale(593),
+    resizeMode: "contain",
     borderRadius: scale(20),
     marginTop: verticalScale(30),
     marginBottom: verticalScale(17),
