@@ -31,7 +31,6 @@ import InterestModal from "../InterestModal";
 import { scale, verticalScale } from "../utils/scale";
 import NoItem from "../../assets/images/noItem.svg";
 import FLogo from "../../assets/flogo.svg";
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -41,7 +40,7 @@ const HomeScreen = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [selectedInterest, setSelectedInterest] = useState<string | null>(null);
-  const [news, setNews] = useState<{ id: string; categoryId: string;[key: string]: any }[]>([]);
+  const [news, setNews] = useState<{ id: string; categoryId: string; createdAt?: { seconds: number }; [key: string]: any }[]>([]);
   const [filteredNews, setFilteredNews] = useState<any[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,17 +51,32 @@ const HomeScreen = () => {
   const [showInterestModal, setShowInterestModal] = useState(false); // մոդալը բացվում է login-ից հետո
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
+
+
+
+
+  
+// components/HomeScreen.tsx
+useEffect(() => {
+  const fetchCategories = async () => {
+    try {
       const categoriesSnapshot = await getDocs(collection(db, "categories"));
-      const cats = categoriesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        name: doc.data().name
-      }));
+      const cats = categoriesSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          name: doc.data().name,
+          order: doc.data().order || 0, // ✅ Default 0, եթե order չկա
+        }))
+        .sort((a, b) => a.order - b.order); // 🔄 Սորտավորում ձեռքով
+      
       setCategories(cats);
-    };
-    fetchCategories();
-  }, []);
+    } catch (error) {
+      console.error("Սխալ կատեգորիաներ բեռնելիս:", error);
+    }
+  };
+  
+  fetchCategories();
+}, []);
 
   useEffect(() => {
     const fetchChannels = async () => {
@@ -82,9 +96,10 @@ const HomeScreen = () => {
       const snapshot = await getDocs(collection(db, "news"));
       const allNews = snapshot.docs.map(doc => ({
         id: doc.id,
-        categoryId: doc.data().categoryId || "", // Ensure categoryId is included
+        categoryId: doc.data().categoryId || "",
         ...doc.data(),
-      }));
+      }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); // 🔽 Վերջինները վերև
       setNews(allNews);
       setFilteredNews(allNews);
       setLoading(false);
@@ -263,6 +278,15 @@ const HomeScreen = () => {
     alert("Հղումը պատճենվել է։");
   };
 
+
+
+  // Extract YouTube video ID from URL
+  // Ավելացրեք այս ֆունկցիան ձեր կոմպոնենտից դուրս
+const extractYoutubeId = (url: string) => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
   const renderNewsItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.newsItem} onPress={() => openNews(item)}>
       <View style={styles.newsHeaderRow}>
@@ -289,9 +313,9 @@ const HomeScreen = () => {
         <Image source={{ uri: item.imageUrls[0] }} style={styles.newsImage} />
       )}
 
-      <Text style={styles.newsContent}>
+      {/* <Text style={styles.newsContent}>
         {item.content.length > 200 ? item.content.substring(0, 200) + "..." : item.content}
-      </Text>
+      </Text> */}
     </TouchableOpacity>
   );
 
@@ -391,32 +415,29 @@ const HomeScreen = () => {
                   </TouchableOpacity>
                 ))}
 
-                <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
-                  <Text style={styles.filterButtonText}>Դիտել</Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </Animated.View >
-          </TouchableOpacity >
-        </Modal>
-        <FlatList
-          style={{
-            backgroundColor: '#F8F8F8',
-            height: '100%',
-            marginHorizontal: scale(55),
-          }}
-          data={filteredNews}
-          contentContainerStyle={{ paddingBottom: 200 }}
-          showsVerticalScrollIndicator={false}
-          renderItem={renderNewsItem}
-          keyExtractor={(item, index) => index.toString()}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.noNewsText}>Տվյալներ չեն գտնվել</Text>
-              <NoItem width={200} height={200} />
-            </View>}
-          refreshing={loading}
-          onRefresh={() => { }}
-        />
+              <TouchableOpacity onPress={handleFilter} style={styles.filterButton}>
+                <Text style={styles.filterButtonText}>Դիտել</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View >
+        </TouchableOpacity >
+      </Modal>
+
+      <FlatList
+        data={filteredNews}
+        renderItem={renderNewsItem}
+        keyExtractor={(item, index) => index.toString()}
+        ListEmptyComponent={
+          <View style={{
+            alignItems: "center",
+            marginTop: '25%',
+          }}>
+            <Text style={styles.noNewsText}>Տվյալներ չեն գտնվել</Text>
+            <NoItem width={200} height={200} />
+          </View>}
+        refreshing={loading}
+        onRefresh={() => { }}
+      />
 
 
         {selectedNews && (
@@ -445,20 +466,20 @@ const HomeScreen = () => {
                 <Text style={styles.modalTitle}>{selectedNews.title}</Text>
                 <Text style={styles.modalDate}>{formatDate(selectedNews.createdAt)}</Text>
 
-                <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
-                  {selectedNews.imageUrls?.map((url: string, idx: number) => (
-                    <Image key={`img-${idx}`} source={{ uri: url }} style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }} />
-                  ))}
-                  {selectedNews.videoUrls?.map((url: string, idx: number) => (
-                    <Video
-                      key={`vid-${idx}`}
-                      source={{ uri: url }}
-                      style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }}
-                      useNativeControls
-                      resizeMode={ResizeMode.CONTAIN}
-                    />
-                  ))}
-                </ScrollView>
+              <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+                {selectedNews.imageUrls?.map((url: string, idx: number) => (
+                  <Image key={`img-${idx}`} source={{ uri: url }} style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }} />
+                ))}
+                {selectedNews.videoUrls?.map((url: string, idx: number) => (
+                  <Video
+                    key={`vid-${idx}`}
+                    source={{ uri: url }}
+                    style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }}
+                    useNativeControls
+                    resizeMode={ResizeMode.CONTAIN}
+                  />
+                ))}
+              </ScrollView>
 
                 <ScrollView>
                   <Text style={styles.modalContentText}>{selectedNews.content}</Text>
@@ -624,8 +645,8 @@ const styles = StyleSheet.create({
   },
   newsImage: {
     width: "100%",
-    height: verticalScale(363),
-    resizeMode: "cover",
+    height: verticalScale(593),
+    resizeMode: "contain",
     borderRadius: scale(20),
     marginTop: verticalScale(30),
     marginBottom: verticalScale(17),

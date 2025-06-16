@@ -224,7 +224,22 @@ const ChannelsScreen = () => {
             </Animated.View>
           </TouchableOpacity >
 
+<<<<<<< HEAD
         </Modal>
+=======
+      {/* Channel list */}
+     <View style={[styles.grid, { flex: 1 }]}>
+  <FlatList
+    data={filteredChannels}
+    renderItem={renderChannel}
+    keyExtractor={(item) => item.id}
+    numColumns={2}
+    columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: 1 }}
+    contentContainerStyle={{ paddingBottom: verticalScale(150) }} // ✅ որպեսզի վերջի էլեմենտը չկտրվի
+  />
+</View>
+
+>>>>>>> redesign
 
         {/* Channel list */}
         <View style={styles.grid}>

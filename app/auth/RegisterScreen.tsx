@@ -20,6 +20,7 @@ import Check from '../../assets/icons/check.svg';
 import AlertImage from '../../assets/icons/alert.svg';
 import StrongPassword from '../../assets/icons/strongPassword.svg';
 import ResetPassword from '../../assets/icons/resetPassword.svg';
+import { Linking } from "react-native";
 import FLogo from "../../assets/flogo.svg";
 import Frame from "../../assets/Frame.svg";
 import { registerForPushNotificationsAsync } from "../utils/notifications";
@@ -68,6 +69,12 @@ const RegisterScreen = () => {
 
       await registerForPushNotificationsAsync(uid);
       setShowAlert(true);
+
+
+      // Alert.alert("Գրանցումը հաջողվեց  ✅", "մուտք գործեք");
+      // router.replace({ pathname: "auth/LoginScreen" as any });
+
+
     } catch (error: any) {
       console.log("🔥 Error during register:", error);
       if (error.code === "auth/email-already-in-use") {
@@ -157,6 +164,33 @@ const RegisterScreen = () => {
         >
           <Text style={styles.linkText}>Արդեն ունե՞ք հաշիվ՝ Մուտք գործել</Text>
         </TouchableOpacity>
+        <View
+          style={{
+            position: "absolute",
+            bottom: 25,
+            left: 0,
+            right: 0,
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <TouchableOpacity onPress={() => Linking.openURL("http://privacy-policy.newslist.am")}>
+            <Text style={[styles.linkText, { fontSize: 10 }]}>
+              Գաղտնիության քաղաքականություն | 
+            </Text>
+          </TouchableOpacity>
+
+          <View style={{ width: 2 }} />
+
+          <TouchableOpacity onPress={() => Linking.openURL("http://terms-and-conditions.newslist.am")}>
+            <Text style={[styles.linkText, { fontSize: 10 }]}>
+                Օգտագործման պայմաններ
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+
       </ScrollView>
       <AlertModal
         visible={showAlert}

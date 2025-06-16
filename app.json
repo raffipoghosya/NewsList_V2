@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.raffi.newslist"
     },
     "android": {
-      "versionCode": 17,
+      "versionCode": 18,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
