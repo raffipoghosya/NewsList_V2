@@ -124,13 +124,13 @@ const HeaderWithExitModal = ({ title = "" }) => {
                                 <Text style={styles.menuUserEmail}>{userData?.email} </Text>
                             </View>
                         </View>
-                        <TouchableOpacity onPress={
+                        {/* <TouchableOpacity onPress={
                             handleLogout}>
                             <View style={styles.logOut}>
                                 <LogOut width={scale(55)} height={verticalScale(55)} />
                                 <Text style={styles.logoutText}>Դուրս գալ</Text>
                             </View>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                     </Animated.View >
                 </TouchableOpacity >
             </Modal>

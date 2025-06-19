@@ -1,3 +1,5 @@
+// ✅ Ամբողջությամբ նորացված ChannelNewsScreen.tsx ըստ HomeScreen-ի կառուցվածքի
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -9,6 +11,7 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Dimensions
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -20,7 +23,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "../../../config/firebase";
-import { Video, ResizeMode } from "expo-av";
+import { ResizeMode, Video } from "expo-av";
 import CloseIcon from "../../../assets/close.svg";
 import ShareIcon from "../../../assets/share.svg";
 import PdfIcon from "../../../assets/pdf.svg";
@@ -29,10 +32,9 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import HeaderWithExitModal from "../../../components/HeaderWithExitModal";
-import { WebView } from "react-native-webview";
-import YoutubePlayer from 'react-native-youtube-iframe';
+import WebView from "react-native-webview";
 
-
+const screenWidth = Dimensions.get("window").width;
 
 const ChannelNewsScreen = () => {
   const { id } = useLocalSearchParams();
@@ -40,69 +42,66 @@ const ChannelNewsScreen = () => {
 
   const [channelName, setChannelName] = useState("Ալիք");
   const [channelLogo, setChannelLogo] = useState(null);
-  const [news, setNews] = useState<NewsItem[]>([]);
-  interface NewsItem {
-    youtubeUrl: string;
+  const [news, setNews] = useState<{
     id: string;
     title: string;
     content: string;
     createdAt: { seconds: number };
-    imageUrls?: string[];
-    videoUrls?: string[];
-    youtubeUrls?: string[];
-  }
-
-
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
-  
-const extractYouTubeId = (url: string) => {
-  const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-  const match = url.match(regExp);
-  return match ? match[1] : "";
-};
+    imageUrls: string[];
+    videoUrls: string[];
+    youtubeUrl: string;
+  }[]>([]);
+  const [selectedNews, setSelectedNews] = useState<{
+    id: string;
+    title: string;
+    content: string;
+    createdAt: { seconds: number };
+    imageUrls: string[];
+    videoUrls: string[];
+    youtubeUrl: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchChannel = async () => {
-      if (typeof id !== "string") {
-        console.error("Invalid channel ID");
-        return;
-      }
-      const channelRef = doc(db, "channels", id);
-      const snapshot = await getDoc(channelRef);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
+      if (typeof id !== "string") return;
+      const snap = await getDoc(doc(db, "channels", id));
+      if (snap.exists()) {
+        const data = snap.data();
         setChannelName(data.name);
-        setChannelLogo(data.logoUrl ?? null);
+        setChannelLogo(data.logoUrl);
       }
     };
-
     const fetchNewsByChannel = async () => {
       const q = query(collection(db, "news"), where("channelId", "==", id));
       const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => {
-        const docData = doc.data();
+      const data = snapshot.docs.map(doc => {
+        const d = doc.data();
         return {
           id: doc.id,
-          title: docData.title || "",
-          content: docData.content || "",
-          createdAt: docData.createdAt || { seconds: 0 },
-          imageUrls: docData.imageUrls || [],
-          videoUrls: docData.videoUrls || [],
-          youtubeUrls: docData.youtubeUrls || [],
-          youtubeUrl: docData.youtubeUrl || "",
+          title: d.title || "",
+          content: d.content || "",
+          createdAt: d.createdAt || { seconds: 0 },
+          imageUrls: d.imageUrls || [],
+          videoUrls: d.videoUrls || [],
+          youtubeUrl: d.youtubeUrl || "",
         };
-      }).sort((a, b) => b.createdAt.seconds - a.createdAt.seconds); 
+      }).sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
       setNews(data);
     };
-
     fetchChannel();
     fetchNewsByChannel();
   }, [id]);
 
-  const openNews = (item: NewsItem) => setSelectedNews(item);
+  const extractYoutubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11 ? match[2] : null;
+  };
+
+  const openNews = (item: React.SetStateAction<{ id: string; title: string; content: string; createdAt: { seconds: number; }; imageUrls: string[]; videoUrls: string[]; youtubeUrl: string; } | null>) => setSelectedNews(item);
   const closeNews = () => setSelectedNews(null);
 
-  const formatDate = (timestamp: { seconds: number; }) => {
+  const formatDate = (timestamp: { seconds: any; }) => {
     if (!timestamp) return "";
     const date = new Date(timestamp.seconds * 1000);
     const day = String(date.getDate()).padStart(2, "0");
@@ -111,21 +110,36 @@ const extractYouTubeId = (url: string) => {
     return `${day}.${month}.${year}`;
   };
 
+  const renderNews = ({ item }: { item: { id: string; title: string; content: string; createdAt: { seconds: number }; imageUrls: string[]; videoUrls: string[]; youtubeUrl: string } }) => (
+    <TouchableOpacity style={styles.newsCard} onPress={() => openNews(item)}>
+      <View style={styles.newsHeader}>
+        <View style={styles.channelInfo}>
+          {channelLogo ? (
+            <Image source={{ uri: channelLogo }} style={styles.channelLogo} />
+          ) : (
+            <View style={styles.channelFallback}><Text style={styles.channelFallbackText}>N</Text></View>
+          )}
+          <Text style={styles.channelName}>
+            {channelName.length > 18 ? `${channelName.substring(0, 18)}...` : channelName}
+          </Text>
+
+        </View>
+        <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
+      </View>
+      <Text style={styles.newsTitle} numberOfLines={3}>{item.title}</Text>
+      {item.imageUrls?.[0] && (
+        <Image source={{ uri: item.imageUrls[0] }} style={styles.newsImage} />
+      )}
+    </TouchableOpacity>
+  );
+
   const generatePDF = async () => {
     const htmlContent = `<h1>${selectedNews?.title}</h1><p>${selectedNews?.content}</p>`;
-    try {
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      const newUri = FileSystem.documentDirectory + "NewsList_" + Date.now() + ".pdf";
-      await FileSystem.moveAsync({ from: uri, to: newUri });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(newUri);
-      } else {
-        Alert.alert("Info", "PDF is ready for sharing.");
-      }
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      Alert.alert("Error", "An error occurred while generating the PDF.");
-    }
+    const { uri } = await Print.printToFileAsync({ html: htmlContent });
+    const newUri = FileSystem.documentDirectory + `News_${Date.now()}.pdf`;
+    await FileSystem.moveAsync({ from: uri, to: newUri });
+    if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(newUri);
+    else Alert.alert("Հաղորդագրություն", "PDF ֆայլը պատրաստ է։");
   };
 
   const copyNewsLink = async () => {
@@ -134,108 +148,72 @@ const extractYouTubeId = (url: string) => {
     alert("Հղումը պատճենվել է։");
   };
 
-    // Extract YouTube video ID from URL
-  // Ավելացրեք այս ֆունկցիան ձեր կոմպոնենտից դուրս
-const extractYoutubeId = (url: string) => {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
-};
-
-  const renderNews = ({ item }: { item: NewsItem }) => (
-    <TouchableOpacity style={styles.newsCard} onPress={() => openNews(item)}>
-      <View style={styles.newsHeader}>
-        <View style={styles.channelInfo}>
-          {channelLogo ? (
-            <Image source={{ uri: channelLogo }} style={styles.channelLogo} />
-          ) : (
-            <View style={styles.channelFallback}>
-              <Text style={styles.channelFallbackText}>N</Text>
-            </View>
-          )}
-          <Text style={styles.channelName}>{channelName}</Text>
-        </View>
-        <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
-      </View>
-      <Text style={styles.newsTitle}>{item.title}</Text>
-      {item.imageUrls?.[0] && (
-        <Image source={{ uri: item.imageUrls[0] }} style={styles.newsImage} />
-      )}
-      <Text style={styles.newsContent}>{item.content.substring(0, 150)}...</Text>
-    </TouchableOpacity>
-  );
-
   return (
     <View style={styles.container}>
       <HeaderWithExitModal title={channelName} />
       <FlatList
         data={news}
         renderItem={renderNews}
-        keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 20 }}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 130 }}
       />
 
       {selectedNews && (
-        <Modal visible={true} animationType="slide" transparent={true}>
+        <Modal visible animationType="slide" transparent>
           <View style={styles.modalBackground}>
             <View style={styles.modalContent}>
               <TouchableOpacity onPress={closeNews} style={styles.modalCloseButton}>
                 <CloseIcon width={26} height={26} fill="#168799" />
               </TouchableOpacity>
+              <ScrollView
+                contentContainerStyle={{
+                  paddingBottom: 180, // ✅ ավելի մեծ padding ներքևից
+                  paddingTop: 20,
+                }}
+                showsVerticalScrollIndicator={false}
+              >
 
-              <View style={styles.newsHeader}>
-                <View style={styles.channelInfo}>
-                  {channelLogo ? (
-                    <Image source={{ uri: channelLogo }} style={styles.channelLogo} />
-                  ) : (
-                    <View style={styles.channelFallback}>
-                      <Text style={styles.channelFallbackText}>N</Text>
+                <View style={styles.newsHeader}>
+                  <View style={styles.channelInfo}>
+                    {channelLogo ? (
+                      <Image source={{ uri: channelLogo }} style={styles.channelLogo} />
+                    ) : (
+                      <View style={styles.channelFallback}><Text style={styles.channelFallbackText}>N</Text></View>
+                    )}
+                    <Text style={styles.channelName}>
+                      {channelName.length > 22 ? `${channelName.substring(0, 22)}...` : channelName}
+                    </Text>
+
+                  </View>
+                </View>
+                <Text style={styles.modalTitle}>{selectedNews.title}</Text>
+                <Text style={styles.modalDate}>{formatDate(selectedNews.createdAt)}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
+                  {selectedNews.imageUrls?.map((url, idx) => (
+                    <Image
+                      key={`img-${idx}`}
+                      source={{ uri: url }}
+                      style={{ width: screenWidth - 40, height: 240, resizeMode: 'contain', borderRadius: 12, marginRight: 20 }}
+                    />
+                  ))}
+                  {selectedNews.youtubeUrl && (
+                    <View style={{ width: screenWidth - 40, height: 240, borderRadius: 12, marginRight: 20 }}>
+                      <WebView
+                        javaScriptEnabled
+                        domStorageEnabled
+                        source={{ uri: selectedNews.youtubeUrl.replace("watch?v=", "embed/") }}
+                        style={{ flex: 1, borderRadius: 12 }}
+                      />
                     </View>
                   )}
-                  <Text style={styles.channelName}>{channelName}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.modalTitle}>{selectedNews.title}</Text>
-              <Text style={styles.modalDate}>{formatDate(selectedNews.createdAt)}</Text>
-
-              <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={{ marginVertical: 10,height:400, }}>
-                {selectedNews.imageUrls?.map((url, idx) => (
-                  <Image
-                    key={`img-${idx}`}
-                    source={{ uri: url }}
-                    style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }}
-                  />
-                ))}
-                {selectedNews.videoUrls?.map((url, idx) => (
-                  <Video
-                    key={`vid-${idx}`}
-                    source={{ uri: url }}
-                    style={{ width: 300, height: 200, marginRight: 10, borderRadius: 8 }}
-                    useNativeControls
-                    resizeMode={ResizeMode.CONTAIN}
-                  />
-                ))}
-                {selectedNews.youtubeUrl && extractYoutubeId(selectedNews.youtubeUrl) && (
-                  <View style={styles.youtubePlayer}>
-                    <YoutubePlayer
-                      height={200}
-                      width={400}
-                      videoId={extractYoutubeId(selectedNews.youtubeUrl)}
-                      webViewStyle={{ borderRadius: 8 }}
-                    />
-                  </View>
-                )}
-              </ScrollView>
-
-              <ScrollView contentContainerStyle={{ paddingBottom: 70 }}>
+                </ScrollView>
                 <Text style={styles.modalContentText}>{selectedNews.content}</Text>
               </ScrollView>
-
               <View style={styles.bottomActionButtons}>
                 <TouchableOpacity onPress={generatePDF} style={styles.actionCircle}>
                   <PdfIcon width={20} height={20} fill="#fff" />
                 </TouchableOpacity>
+
                 <TouchableOpacity onPress={copyNewsLink} style={styles.actionCircle}>
                   <ShareIcon width={20} height={20} fill="#fff" />
                 </TouchableOpacity>
@@ -249,10 +227,32 @@ const extractYoutubeId = (url: string) => {
 };
 
 export default ChannelNewsScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f8f8",
+  },
+  actionCircle: {
+    padding: 10,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 50,
+    minHeight: 50,
+  },
+ bottomActionButtons: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#168799",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    borderWidth: 0,
   },
   newsHeader: {
     flexDirection: "row",
@@ -260,16 +260,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
-  youtubePlayer: {
-    width: "100%",
-    height: 200,
-    marginRight: 10,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
   channelInfo: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  channelLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  channelFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  channelFallbackText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  channelName: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  dateText: {
+    fontSize: 14,
+    color: "#777",
   },
   newsCard: {
     backgroundColor: "#fff",
@@ -283,116 +303,45 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
+    marginVertical: 10,
   },
   newsImage: {
     width: "100%",
     height: 200,
-    resizeMode: "cover",
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  newsContent: {
-    fontSize: 14,
-    color: "#777",
-    marginTop: 5,
+    borderRadius: 10,
   },
   modalBackground: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   modalContent: {
     backgroundColor: "#fff",
     padding: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     width: "90%",
-    maxHeight: "85%",
-    overflow: "hidden",
+    maxHeight: "90%",
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 10,
-    textAlign: "center",
+    marginBottom: 6,
   },
   modalDate: {
     fontSize: 14,
-    color: "#555",
+    color: "#888",
     marginBottom: 10,
-    marginLeft: 5,
-    textAlign: "left",
   },
   modalContentText: {
     fontSize: 16,
-    color: "#555",
-    marginBottom: 20,
+    color: "#444",
+    lineHeight: 24,
   },
   modalCloseButton: {
     position: "absolute",
     top: 10,
     right: 10,
-    zIndex: 10,
-    padding: 8,
-    borderRadius: 30,
-  },
-  bottomActionButtons: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#168799",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 6,
-  },
-  actionCircle: {
-    padding: 10,
-    borderRadius: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 50,
-    minHeight: 50,
-  },
-  closeButton: {
-    backgroundColor: "rgb(238, 238, 230)",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 30,
-  },
-  channelFallback: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#ccc",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  channelFallbackText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  channelLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    resizeMode: "cover",
-  },
-  channelName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginLeft: 10,
-  },
-  dateText: {
-    fontSize: 14,
-    color: "#777",
-    marginLeft: 10,
+    zIndex: 100,
   },
 });

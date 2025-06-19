@@ -12,6 +12,8 @@ import {
 import Checkbox from "expo-checkbox";
 import { collection, getDocs, updateDoc, doc, query, orderBy } from "firebase/firestore";
 import { auth, db } from "../config/firebase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 
 interface Props {
   visible: boolean;
@@ -61,22 +63,17 @@ const InterestModal = ({ visible, onClose }: Props) => {
       setErrorModalVisible(true);
       return;
     }
-
-    const user = auth.currentUser;
-    if (!user) return;
-
+  
     try {
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
-        categories: selected,
-        interestsSelected: true,
-      });
-
+      await AsyncStorage.setItem("user_interests", JSON.stringify(selected));
+      await AsyncStorage.setItem("interests_selected", "true");
+  
       onClose(selected);
     } catch (error) {
-      console.error("Սխալ պահպանման ժամանակ:", error);
+      console.error("Սխալ հետաքրքրությունները պահելիս:", error);
     }
   };
+  
 
   return (
     <Modal visible={visible} animationType="fade" transparent>

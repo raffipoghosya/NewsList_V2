@@ -11,8 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db ,auth} from '../../config/firebase';
-import { onAuthStateChanged } from "firebase/auth";
+import { db } from '../../config/firebase';
 
 const SplashScreen = () => {
   const [countdown, setCountdown] = useState(7);
@@ -46,7 +45,7 @@ const SplashScreen = () => {
     }, 1000);
 
     const timeout = setTimeout(() => {
-      router.replace("auth/RegisterScreen" as any);
+      router.replace("tabs/NewsListScreen" as any);
     }, 7000);
 
     return () => {
@@ -93,7 +92,7 @@ const SplashScreen = () => {
         <Image source={require('../../assets/ywebLogo.png')} style={styles.bottomLogo} />
         <TouchableOpacity
           style={styles.skipButton}
-          onPress={() => router.replace("auth/RegisterScreen" as any)}
+          onPress={() => router.replace("tabs/NewsListScreen" as any)}
         >
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
@@ -119,7 +118,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 150,
-    height:80,
+    height: 80,
     resizeMode: 'contain',
   },
   circle: {
