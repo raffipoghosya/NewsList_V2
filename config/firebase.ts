@@ -1,9 +1,10 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+// config/firebase.ts
 
-// 🔐 Կոնֆիգ
+import { initializeApp, getApp, getApps } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+
+// 🔐 Ձեր Firebase-ի կոնֆիգուրացիան
 const firebaseConfig = {
   apiKey: "AIzaSyBQ2KGheZVAG61tuDnq2EU5pRBZqvJ6xoU",
   authDomain: "newsapp-ea699.firebaseapp.com",
@@ -13,15 +14,16 @@ const firebaseConfig = {
   appId: "1:273216501570:ios:c918a0f02a61ff1e697adb"
 };
 
-// Ստեղծում ենք Firebase app-ը (եթե արդեն գոյություն չունի)
-const app = initializeApp(firebaseConfig);
+// Ստուգում ենք, որպեսզի Firebase-ը մի քանի անգամ չսկզբնականացվի
+let app;
+if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+} else {
+    app = getApp();
+}
 
-// Firebase Auth-ով (պահպանելու վիճակ)
-const auth = getAuth(app); // Անհրաժեշտ է միայն `getAuth`
-setPersistence(auth, browserLocalPersistence).catch((e) => {
-  console.error("Persistence setup failed", e);
-});
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-export { app, auth, db, storage };
+// ✅ Auth-ը հեռացված է
+export { app, db, storage };

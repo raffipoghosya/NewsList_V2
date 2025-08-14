@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import * as Notifications from "expo-notifications";
 import { Linking } from "react-native";
+import { useFonts } from 'expo-font'; // ✅ 1. Ներմուծում ենք useFonts-ը
 
 import RegisterScreen from "./app/RegisterScreen";
 import LoginScreen from "./app/LoginScreen";
@@ -11,6 +12,14 @@ import HomeScreen from "./app/HomeScreen";
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  // ✅ 2. Կանչում ենք useFonts hook-ը՝ տառատեսակները բեռնելու համար
+  const [fontsLoaded] = useFonts({
+    'Montserrat-Arm-Regular': require('./assets/fonts/Montserratarm-Regular.woff2'),
+    'Montserrat-Arm-Medium': require('./assets/fonts/Montserratarm-Medium.woff2'),
+    'Montserrat-Arm-SemiBold': require('./assets/fonts/Montserratarm-SemiBold.woff2'),
+    'Montserrat-Arm-Bold': require('./assets/fonts/Montserratarm-Bold.woff2'),
+  });
+
   const [pushToken, setPushToken] = useState(null);
 
   // Push Token ստանալու ֆունկցիա
@@ -26,24 +35,21 @@ export default function App() {
     setPushToken(token);
   };
 
+  const navigationRef = useRef();
+
   // Deep Linking-ից URL ստանալու և նավիգացիա կատարելու ֆունկցիա
   const handleDeepLink = (event) => {
     let url = event.url;
     console.log("Opened with URL:", url);
 
-    // Օրինակ, եթե URL-ը պարունակում է resetPassword, ուղարկել LoginScreen-ին
     if (url.includes("resetPassword")) {
       navigationRef.current?.navigate("LoginScreen", { resetPassword: true });
     }
   };
 
-  // React Navigation-ի համար ref (հիմա առաջիկայում օգտագործելու ենք deep linking-ի համար)
-  const navigationRef = React.useRef();
-
   useEffect(() => {
     getPushToken();
 
-    // Ստուգում ենք, եթե հավելվածը բացվել է deep link-ով
     Linking.getInitialURL().then((url) => {
       if (url) {
         console.log("Initial URL: ", url);
@@ -51,7 +57,6 @@ export default function App() {
       }
     });
 
-    // Ակտիվ հետևում ենք deep linking event-ները
     const subscription = Linking.addEventListener("url", handleDeepLink);
 
     return () => {
@@ -59,9 +64,17 @@ export default function App() {
     };
   }, []);
 
+  // ✅ 3. Ստուգում ենք՝ արդյոք տառատեսակները բեռնվել են
+  if (!fontsLoaded) {
+    return null; // Կամ կարող եք վերադարձնել բեռնման էկրան (Splash Screen), մինչև տառատեսակները բեռնվեն
+  }
+
   return (
     <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator initialRouteName="RegisterScreen">
+      <Stack.Navigator 
+        initialRouteName="RegisterScreen"
+        screenOptions={{ headerShown: false }} // Թաքցնում ենք բոլոր էկրանների վերնագրերը
+      >
         <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
         <Stack.Screen name="HomeScreen" component={HomeScreen} />

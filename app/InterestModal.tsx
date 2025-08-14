@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import Checkbox from "expo-checkbox";
 import { collection, getDocs, updateDoc, doc, query, orderBy } from "firebase/firestore";
-import { auth, db } from "../config/firebase";
+import {  db } from "../config/firebase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
