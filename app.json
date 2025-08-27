@@ -20,7 +20,7 @@
       "bundleIdentifier": "com.raffi.newslist"
     },
     "android": {
-      "versionCode": 20,
+      "versionCode": 30,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
