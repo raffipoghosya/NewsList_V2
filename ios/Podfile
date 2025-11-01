@@ -1,3 +1,4 @@
+# ios/Podfile (Updated Content)
 source 'https://github.com/expo/expo.git'
 source 'https://cdn.cocoapods.org/'
 
@@ -10,7 +11,8 @@ podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties
 ENV['RCT_NEW_ARCH_ENABLED'] = '0' if podfile_properties['newArchEnabled'] == 'false'
 ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] = podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
 
-platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
+platform :ios, podfile_properties['ios.deploymentTarget'] ||
+'15.1'
 install! 'cocoapods',
   :deterministic_uuids => false
 
@@ -18,7 +20,6 @@ prepare_react_native_project!
 
 target 'NewsList' do
   use_expo_modules!
-
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
     config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
   else
@@ -33,9 +34,15 @@ target 'NewsList' do
   end
 
   config = use_native_modules!(config_command)
-
-  use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
-  use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
+  
+  # Correct Ruby syntax for conditional use_frameworks!
+  if podfile_properties['ios.useFrameworks']
+    use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym
+  elsif ENV['USE_FRAMEWORKS']
+    use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym
+  else
+    use_frameworks!
+  end
 
   use_react_native!(
     :path => config[:reactNativePath],
@@ -52,6 +59,15 @@ target 'NewsList' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => podfile_properties['apple.ccacheEnabled'] == 'true',
     )
+    
+    # FIX: Set minimum deployment target for all Pods to match the project's requirement of 15.1
+    installer.pods_project.targets.each do |target|
+      if target.platform_name == :ios
+        target.build_configurations.each do |config|
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        end
+      end
+    end
 
     # This is necessary for Xcode 14, because it signs resource bundles by default
     # when building for devices.
